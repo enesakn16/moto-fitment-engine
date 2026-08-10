@@ -114,7 +114,7 @@ def _self_test() -> None:
     original = TyreSpec.parse("150/70-17")
     alternative = TyreSpec.parse("150/60-17")
     delta = diameter_delta_percent(original, alternative)
-    assert round(delta, 1) == -4.5
+    assert round(delta, 1) == -4.7
     assert not is_reasonable_alternative(original, alternative)
 
     close_alt = TyreSpec.parse("140/70-17")

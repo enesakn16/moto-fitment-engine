@@ -1,4 +1,5 @@
 import unittest
+from datetime import date, timedelta
 
 from moto_fitment import (
     Fitment,
@@ -50,6 +51,75 @@ class FitmentTests(unittest.TestCase):
     def test_unknown_fitment_fails_closed(self) -> None:
         with self.assertRaises(LookupError):
             find_fitment("Honda", "PCX 125", 2025, self.records)
+
+    def test_verified_provenance_requires_https_and_valid_date(self) -> None:
+        base = dict(
+            make="Honda",
+            model="PCX 125",
+            year_from=2021,
+            year_to=2024,
+            front=TyreSpec.parse("110/70-14"),
+            rear=TyreSpec.parse("130/70-13"),
+            source_note="fixture",
+        )
+
+        verified = Fitment(
+            **base,
+            source_url="https://example.com/fitment",
+            verified_on="2026-01-01",
+        )
+        insecure = Fitment(
+            **base,
+            source_url="http://example.com/fitment",
+            verified_on="2026-01-01",
+        )
+        malformed_date = Fitment(
+            **base,
+            source_url="https://example.com/fitment",
+            verified_on="2026-13-40",
+        )
+        future_date = Fitment(
+            **base,
+            source_url="https://example.com/fitment",
+            verified_on=(date.today() + timedelta(days=1)).isoformat(),
+        )
+
+        self.assertTrue(verified.is_verified)
+        self.assertFalse(insecure.is_verified)
+        self.assertFalse(malformed_date.is_verified)
+        self.assertFalse(future_date.is_verified)
+
+    def test_require_verified_rejects_undocumented_match(self) -> None:
+        with self.assertRaisesRegex(LookupError, "no verified provenance"):
+            find_fitment(
+                "Honda",
+                "PCX 125",
+                2023,
+                self.records,
+                require_verified=True,
+            )
+
+    def test_require_verified_skips_unverified_and_returns_verified_duplicate(self) -> None:
+        verified = Fitment(
+            make="Honda",
+            model="PCX 125",
+            year_from=2021,
+            year_to=2024,
+            front=TyreSpec.parse("110/70-14"),
+            rear=TyreSpec.parse("130/70-13"),
+            source_note="manufacturer fixture",
+            source_url="https://example.com/fitment",
+            verified_on="2026-01-01",
+        )
+
+        result = find_fitment(
+            "Honda",
+            "PCX 125",
+            2023,
+            (*self.records, verified),
+            require_verified=True,
+        )
+        self.assertIs(result, verified)
 
 
 class AlternativeGeometryTests(unittest.TestCase):

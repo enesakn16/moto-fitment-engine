@@ -1,5 +1,8 @@
+import json
+import tempfile
 import unittest
 from datetime import date, timedelta
+from pathlib import Path
 
 from moto_fitment import (
     Fitment,
@@ -7,6 +10,7 @@ from moto_fitment import (
     diameter_delta_percent,
     find_fitment,
     is_reasonable_alternative,
+    load_fitments_json,
 )
 
 
@@ -120,6 +124,81 @@ class FitmentTests(unittest.TestCase):
             require_verified=True,
         )
         self.assertIs(result, verified)
+
+
+class FitmentJsonLoaderTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.record = {
+            "make": "Honda",
+            "model": "PCX 125",
+            "year_from": 2021,
+            "year_to": 2024,
+            "front": "110/70-14",
+            "rear": "130/70-13",
+            "source_note": "manufacturer fixture",
+            "source_url": "https://example.com/pcx-125-fitment",
+            "verified_on": "2026-01-01",
+        }
+
+    def _write_json(self, payload) -> Path:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "fitments.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        return path
+
+    def test_loads_verified_records_and_supports_verified_lookup(self) -> None:
+        records = load_fitments_json(self._write_json([self.record]))
+
+        self.assertEqual(len(records), 1)
+        self.assertTrue(records[0].is_verified)
+        match = find_fitment(
+            "honda",
+            "PCX 125",
+            2023,
+            records,
+            require_verified=True,
+        )
+        self.assertEqual(match.front, TyreSpec.parse("110/70-14"))
+        self.assertEqual(match.rear, TyreSpec.parse("130/70-13"))
+
+    def test_rejects_unknown_fields(self) -> None:
+        record = {**self.record, "confidence": 0.99}
+        with self.assertRaisesRegex(ValueError, "unknown fields: confidence"):
+            load_fitments_json(self._write_json([record]))
+
+    def test_rejects_duplicate_normalized_make_model_year_range(self) -> None:
+        duplicate = {
+            **self.record,
+            "make": " HONDA ",
+            "model": "pcx   125",
+            "source_note": "second source",
+            "source_url": "https://example.com/second-source",
+        }
+        with self.assertRaisesRegex(ValueError, "duplicates an existing fitment range"):
+            load_fitments_json(self._write_json([self.record, duplicate]))
+
+    def test_rejects_future_verification_date(self) -> None:
+        record = {
+            **self.record,
+            "verified_on": (date.today() + timedelta(days=1)).isoformat(),
+        }
+        with self.assertRaisesRegex(ValueError, "does not have verified provenance"):
+            load_fitments_json(self._write_json([record]))
+
+    def test_rejects_malformed_tyre_size(self) -> None:
+        record = {**self.record, "front": "3.50-10"}
+        with self.assertRaises(ValueError):
+            load_fitments_json(self._write_json([record]))
+
+    def test_rejects_oversized_file_before_json_parsing(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "oversized.json"
+        path.write_bytes(b" " * 1_000_001)
+
+        with self.assertRaisesRegex(ValueError, "exceeds 1000000 byte safety limit"):
+            load_fitments_json(path)
 
 
 class AlternativeGeometryTests(unittest.TestCase):

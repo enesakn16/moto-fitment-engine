@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+import json
+from pathlib import Path
 from typing import Iterable
 from urllib.parse import urlparse
 
@@ -105,6 +107,118 @@ _DEMO_FITMENTS: tuple[Fitment, ...] = (
 
 def _normalize(value: str) -> str:
     return " ".join(value.casefold().split())
+
+
+_MAX_JSON_BYTES = 1_000_000
+_JSON_FIELDS = {
+    "make",
+    "model",
+    "year_from",
+    "year_to",
+    "front",
+    "rear",
+    "source_note",
+    "source_url",
+    "verified_on",
+}
+
+
+def load_fitments_json(path: str | Path) -> tuple[Fitment, ...]:
+    """Load strictly validated fitment records from a JSON array.
+
+    The loader refuses unknown fields, oversized files, invalid year ranges,
+    malformed tyre sizes, duplicate make/model/year ranges, and records without
+    verified provenance. Production data therefore cannot silently downgrade to
+    the permissive demo-data behavior.
+    """
+    source = Path(path)
+    if not source.is_file():
+        raise ValueError(f"Fitment JSON file does not exist: {source}")
+
+    size = source.stat().st_size
+    if size > _MAX_JSON_BYTES:
+        raise ValueError(f"Fitment JSON exceeds {_MAX_JSON_BYTES} byte safety limit")
+
+    try:
+        payload = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Unable to read fitment JSON: {source}") from exc
+
+    if not isinstance(payload, list) or not payload:
+        raise ValueError("Fitment JSON must contain a non-empty array of records")
+
+    records: list[Fitment] = []
+    identities: set[tuple[str, str, int, int]] = set()
+
+    for index, item in enumerate(payload, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"Fitment record {index} must be a JSON object")
+
+        unknown = set(item) - _JSON_FIELDS
+        missing = _JSON_FIELDS - set(item)
+        if unknown:
+            raise ValueError(
+                f"Fitment record {index} has unknown fields: {', '.join(sorted(unknown))}"
+            )
+        if missing:
+            raise ValueError(
+                f"Fitment record {index} is missing fields: {', '.join(sorted(missing))}"
+            )
+
+        make = item["make"]
+        model = item["model"]
+        source_note = item["source_note"]
+        source_url = item["source_url"]
+        verified_on = item["verified_on"]
+        if not all(isinstance(value, str) and value.strip() for value in (make, model, source_note)):
+            raise ValueError(f"Fitment record {index} has blank make/model/source_note")
+        if not isinstance(source_url, str) or not isinstance(verified_on, str):
+            raise ValueError(f"Fitment record {index} provenance fields must be strings")
+
+        year_from = item["year_from"]
+        year_to = item["year_to"]
+        if (
+            isinstance(year_from, bool)
+            or isinstance(year_to, bool)
+            or not isinstance(year_from, int)
+            or not isinstance(year_to, int)
+            or year_from < 1900
+            or year_to < year_from
+            or year_to > date.today().year + 2
+        ):
+            raise ValueError(f"Fitment record {index} has an invalid year range")
+
+        front_value = item["front"]
+        rear_value = item["rear"]
+        if not isinstance(front_value, str) or not isinstance(rear_value, str):
+            raise ValueError(f"Fitment record {index} tyre sizes must be strings")
+
+        record = Fitment(
+            make=make.strip(),
+            model=model.strip(),
+            year_from=year_from,
+            year_to=year_to,
+            front=TyreSpec.parse(front_value),
+            rear=TyreSpec.parse(rear_value),
+            source_note=source_note.strip(),
+            source_url=source_url.strip(),
+            verified_on=verified_on.strip(),
+        )
+        if not record.is_verified:
+            raise ValueError(f"Fitment record {index} does not have verified provenance")
+
+        identity = (
+            _normalize(record.make),
+            _normalize(record.model),
+            record.year_from,
+            record.year_to,
+        )
+        if identity in identities:
+            raise ValueError(f"Fitment record {index} duplicates an existing fitment range")
+        identities.add(identity)
+        records.append(record)
+
+    return tuple(records)
 
 
 def find_fitment(

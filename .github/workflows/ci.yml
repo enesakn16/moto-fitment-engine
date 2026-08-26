@@ -26,5 +26,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install package
+        run: python -m pip install .
+
+      - name: Verify installed import
+        run: python -c "import moto_fitment; print(moto_fitment.__file__)"
+
       - name: Run unit tests
         run: python -m unittest discover -s tests -v

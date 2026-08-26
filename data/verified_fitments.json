@@ -1,0 +1,13 @@
+[
+  {
+    "make": "Honda",
+    "model": "CB500F",
+    "year_from": 2025,
+    "year_to": 2025,
+    "front": "120/70R-17",
+    "rear": "160/60-17",
+    "source_note": "Official 2025 Honda Powersports specification page; Model ID CB500FA. Front tire 120/70R-17, rear tire 160/60-17.",
+    "source_url": "https://powersports.honda.com/motorcycle/standard/cb500f/2025/cb500f",
+    "verified_on": "2026-08-26"
+  }
+]

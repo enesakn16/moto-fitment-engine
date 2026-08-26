@@ -32,5 +32,23 @@ jobs:
       - name: Verify installed import
         run: python -c "import moto_fitment; print(moto_fitment.__file__)"
 
+      - name: Validate verified fitment dataset
+        run: |
+          python - <<'PY'
+          from moto_fitment import find_fitment, load_fitments_json
+
+          records = load_fitments_json("data/verified_fitments.json")
+          fitment = find_fitment(
+              "Honda",
+              "CB500F",
+              2025,
+              records,
+              require_verified=True,
+          )
+          assert str(fitment.front) == "120/70-17"
+          assert str(fitment.rear) == "160/60-17"
+          assert fitment.is_verified
+          PY
+
       - name: Run unit tests
         run: python -m unittest discover -s tests -v

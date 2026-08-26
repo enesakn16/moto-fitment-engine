@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import date
 import json
 from pathlib import Path
+import re
 from typing import Iterable
 from urllib.parse import urlparse
 
@@ -31,12 +32,16 @@ class TyreSpec:
 
     @classmethod
     def parse(cls, value: str) -> "TyreSpec":
-        try:
-            size, rim = value.strip().upper().replace("ZR", "-").replace("R", "-").split("-")
-            width, aspect = size.split("/")
-            return cls(int(width), int(aspect), int(rim))
-        except (ValueError, TypeError) as exc:
-            raise ValueError(f"Unsupported tyre size: {value!r}") from exc
+        if not isinstance(value, str):
+            raise ValueError(f"Unsupported tyre size: {value!r}")
+
+        normalized = value.strip().upper().replace(" ", "")
+        match = re.fullmatch(r"(\d{2,3})/(\d{2,3})(?:(?:ZR|R)-?|-)(\d{2})", normalized)
+        if not match:
+            raise ValueError(f"Unsupported tyre size: {value!r}")
+
+        width, aspect, rim = match.groups()
+        return cls(int(width), int(aspect), int(rim))
 
     def __str__(self) -> str:
         return f"{self.width_mm}/{self.aspect_ratio}-{self.rim_in}"

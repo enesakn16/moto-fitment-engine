@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moto-fitment-engine"
+version = "0.1.0.dev0"
+description = "Fail-closed motorcycle tire fitment lookup and geometric alternative evaluation with provenance-aware data loading."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "Enes AKIN" }
+]
+keywords = ["motorcycle", "tire", "fitment", "oem", "parts"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/enesakn16/moto-fitment-engine"
+Repository = "https://github.com/enesakn16/moto-fitment-engine"
+Issues = "https://github.com/enesakn16/moto-fitment-engine/issues"
+
+[tool.setuptools]
+py-modules = ["moto_fitment"]

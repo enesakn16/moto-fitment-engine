@@ -53,5 +53,16 @@
     "source_note": "Official Yamaha Motor Europe 2025 TRACER 9 fact sheet. Front tyre 120/70ZR17M/C (58W) tubeless, rear tyre 180/55ZR17M/C (73W) tubeless.",
     "source_url": "https://cdn2.yamaha-motor.eu/prod/product-assets/2025/MT09ATR/Factsheets/2025-MT09ATR_en.pdf",
     "verified_on": "2026-08-27"
+  },
+  {
+    "make": "Yamaha",
+    "model": "XMAX 300",
+    "year_from": 2025,
+    "year_to": 2025,
+    "front": "120/70-15",
+    "rear": "140/70-14",
+    "source_note": "Official Yamaha Motor Europe 2025 XMAX 300 product page and Yamaha technical specifications. Front tyre 120/70-15, rear tyre 140/70-14.",
+    "source_url": "https://www.yamaha-motor.eu/cz/cs/scooters/sport/pdp/xmax-300-2025/",
+    "verified_on": "2026-08-27"
   }
 ]

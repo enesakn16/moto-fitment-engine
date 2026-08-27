@@ -31,5 +31,16 @@
     "source_note": "Official Yamaha Motor Europe 2025 MT-07 specification/fact sheet. Front tyre 120/70 ZR 17M/C (58W) tubeless, rear tyre 180/55 ZR 17M/C (73W) tubeless.",
     "source_url": "https://www.yamaha-motor.eu/is/en/motorcycles/hyper-naked/pdp/mt-07/",
     "verified_on": "2026-08-27"
+  },
+  {
+    "make": "Yamaha",
+    "model": "MT-09",
+    "year_from": 2025,
+    "year_to": 2025,
+    "front": "120/70ZR17",
+    "rear": "180/55ZR17",
+    "source_note": "Official Yamaha Motor Europe 2025 MT-09 fact sheet. Front tyre 120/70ZR17M/C (58W) tubeless, rear tyre 180/55ZR17M/C (73W) tubeless.",
+    "source_url": "https://cdn2.yamaha-motor.eu/prod/product-assets/2025/MT09A-35/Factsheets/2025-MT09A-35_en.pdf",
+    "verified_on": "2026-08-27"
   }
 ]

@@ -132,9 +132,9 @@ def load_fitments_json(path: str | Path) -> tuple[Fitment, ...]:
     """Load strictly validated fitment records from a JSON array.
 
     The loader refuses unknown fields, oversized files, invalid year ranges,
-    malformed tyre sizes, duplicate make/model/year ranges, and records without
+    malformed tyre sizes, overlapping make/model/year ranges, and records without
     verified provenance. Production data therefore cannot silently downgrade to
-    the permissive demo-data behavior.
+    the permissive demo-data behavior or become lookup-order dependent.
     """
     source = Path(path)
     if not source.is_file():
@@ -154,6 +154,7 @@ def load_fitments_json(path: str | Path) -> tuple[Fitment, ...]:
 
     records: list[Fitment] = []
     identities: set[tuple[str, str, int, int]] = set()
+    ranges_by_model: dict[tuple[str, str], list[tuple[int, int]]] = {}
 
     for index, item in enumerate(payload, start=1):
         if not isinstance(item, dict):
@@ -212,15 +213,22 @@ def load_fitments_json(path: str | Path) -> tuple[Fitment, ...]:
         if not record.is_verified:
             raise ValueError(f"Fitment record {index} does not have verified provenance")
 
-        identity = (
-            _normalize(record.make),
-            _normalize(record.model),
-            record.year_from,
-            record.year_to,
-        )
+        make_key = _normalize(record.make)
+        model_key = _normalize(record.model)
+        identity = (make_key, model_key, record.year_from, record.year_to)
         if identity in identities:
             raise ValueError(f"Fitment record {index} duplicates an existing fitment range")
+
+        range_key = (make_key, model_key)
+        for existing_from, existing_to in ranges_by_model.get(range_key, ()):
+            if record.year_from <= existing_to and existing_from <= record.year_to:
+                raise ValueError(
+                    f"Fitment record {index} overlaps an existing fitment range for "
+                    f"{record.make} {record.model}"
+                )
+
         identities.add(identity)
+        ranges_by_model.setdefault(range_key, []).append((record.year_from, record.year_to))
         records.append(record)
 
     return tuple(records)

@@ -64,5 +64,16 @@
     "source_note": "Official Yamaha Motor Europe 2025 XMAX 300 product page and Yamaha technical specifications. Front tyre 120/70-15, rear tyre 140/70-14.",
     "source_url": "https://www.yamaha-motor.eu/cz/cs/scooters/sport/pdp/xmax-300-2025/",
     "verified_on": "2026-08-27"
+  },
+  {
+    "make": "Yamaha",
+    "model": "NMAX 125",
+    "year_from": 2025,
+    "year_to": 2025,
+    "front": "110/70-13",
+    "rear": "130/70-13",
+    "source_note": "Official Yamaha Motor Europe 2025 NMAX 125 fact sheet. Front tyre 110/70-13, rear tyre 130/70-13.",
+    "source_url": "https://cdn2.yamaha-motor.eu/prod/product-assets/2025/G125YM/Factsheets/2025-G125YM_fr-BE.pdf",
+    "verified_on": "2026-08-28"
   }
 ]

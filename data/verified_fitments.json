@@ -22,6 +22,17 @@
     "verified_on": "2026-08-27"
   },
   {
+    "make": "Honda",
+    "model": "PCX125",
+    "year_from": 2025,
+    "year_to": 2025,
+    "front": "110/70-14",
+    "rear": "130/70-13",
+    "source_note": "Official Honda UK PCX125 2025 specifications. Front tyre 110/70-14M/C 50P, rear tyre 130/70-13M/C 63P.",
+    "source_url": "https://www.honda.co.uk/motorcycles/range/scooter/pcx-125/specifications.html",
+    "verified_on": "2026-08-28"
+  },
+  {
     "make": "Yamaha",
     "model": "MT-07",
     "year_from": 2025,

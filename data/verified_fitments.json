@@ -66,6 +66,17 @@
     "verified_on": "2026-08-29"
   },
   {
+    "make": "Honda",
+    "model": "X-ADV",
+    "year_from": 2026,
+    "year_to": 2026,
+    "front": "120/70R17",
+    "rear": "160/60R15",
+    "source_note": "Official Honda UK X-ADV 2026 specifications. Front tyre 120/70R17 M/C (58H), rear tyre 160/60R15 M/C (67H).",
+    "source_url": "https://www.honda.co.uk/motorcycles/range/adventure/x-adv/specifications.html",
+    "verified_on": "2026-08-29"
+  },
+  {
     "make": "Yamaha",
     "model": "MT-07",
     "year_from": 2025,

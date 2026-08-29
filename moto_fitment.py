@@ -36,7 +36,7 @@ class TyreSpec:
             raise ValueError(f"Unsupported tyre size: {value!r}")
 
         normalized = value.strip().upper().replace(" ", "")
-        match = re.fullmatch(r"(\d{2,3})/(\d{2,3})(?:(?:ZR|R)-?|-)(\d{2})", normalized)
+        match = re.fullmatch(r"(\d{2,3})/(\d{2,3})(?:-?(?:ZR|R)-?|-)(\d{2})", normalized)
         if not match:
             raise ValueError(f"Unsupported tyre size: {value!r}")
 

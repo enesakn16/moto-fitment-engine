@@ -55,6 +55,17 @@
     "verified_on": "2026-08-28"
   },
   {
+    "make": "Honda",
+    "model": "Forza 750",
+    "year_from": 2026,
+    "year_to": 2026,
+    "front": "120/70-R17",
+    "rear": "160/60-R15",
+    "source_note": "Official Honda UK Forza 750 2026 specifications. Front tyre 120/70-R17M/C (58H), rear tyre 160/60-R15M/C (67H).",
+    "source_url": "https://www.honda.co.uk/motorcycles/range/scooter/forza-750/specifications.html",
+    "verified_on": "2026-08-29"
+  },
+  {
     "make": "Yamaha",
     "model": "MT-07",
     "year_from": 2025,

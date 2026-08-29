@@ -16,8 +16,18 @@ from moto_fitment import (
 
 class TyreSpecTests(unittest.TestCase):
     def test_parses_common_radial_and_zr_notation(self) -> None:
-        self.assertEqual(TyreSpec.parse("150/70R17"), TyreSpec(150, 70, 17))
-        self.assertEqual(TyreSpec.parse("180/55ZR17"), TyreSpec(180, 55, 17))
+        expected = TyreSpec(120, 70, 17)
+        for notation in (
+            "120/70R17",
+            "120/70-R17",
+            "120/70R-17",
+            "120/70ZR17",
+            "120/70-ZR17",
+            "120/70ZR-17",
+            "120/70-17",
+        ):
+            with self.subTest(notation=notation):
+                self.assertEqual(TyreSpec.parse(notation), expected)
 
     def test_rejects_unsupported_size(self) -> None:
         with self.assertRaises(ValueError):

@@ -6,7 +6,9 @@ Motorcycle tyre fitment lookup and geometry screening for commerce, catalog and 
 
 The project provides a small, testable core for resolving **make + model + year → front/rear tyre size** and for screening alternative tyre dimensions by overall-diameter difference.
 
-> **Important:** a geometrically close tyre is not automatically safe or manufacturer-approved for a motorcycle. Rim width, load/speed rating, clearance, ABS/TCS calibration, homologation and manufacturer documentation still matter. The bundled fitment records are demo data and must not be treated as production fitment truth.
+The repository now includes a deliberately limited, source-traceable dataset in [`data/verified_fitments.json`](data/verified_fitments.json). Its records are tied to official Honda/Yamaha sources and verification dates, but coverage is still too narrow to treat the project as a complete production fitment catalog.
+
+> **Important:** a geometrically close tyre is not automatically safe or manufacturer-approved for a motorcycle. Rim width, load/speed rating, clearance, ABS/TCS calibration, homologation and manufacturer documentation still matter. The small in-module sample dataset remains demo-only; production-style lookups should use the externally loaded verified dataset and `require_verified=True`.
 
 ## Current capabilities
 
@@ -49,11 +51,11 @@ from moto_fitment import (
     load_fitments_json,
 )
 
-records = load_fitments_json("fitments.json")
+records = load_fitments_json("data/verified_fitments.json")
 fitment = find_fitment(
     "Honda",
-    "PCX 125",
-    2023,
+    "PCX125",
+    2025,
     records=records,
     require_verified=True,
 )
@@ -67,6 +69,12 @@ alternative = TyreSpec.parse("150/60-17")
 print(round(diameter_delta_percent(original, alternative), 2))
 print(is_reasonable_alternative(original, alternative))
 ```
+
+## Verified dataset
+
+[`data/verified_fitments.json`](data/verified_fitments.json) currently contains a small set of Honda and Yamaha model-year records whose tyre sizes are traceable to official manufacturer pages or manufacturer-hosted specification documents. Each record carries its source URL, source note and verification date.
+
+The dataset is intentionally conservative: missing models and years remain **no match**. A source URL is provenance, not proof by itself, so expanding coverage still requires human verification against authoritative manufacturer material.
 
 ## Verified JSON data contract
 
@@ -97,7 +105,7 @@ The core is intentionally dependency-light and separates four concerns:
 3. **Tyre geometry** — `TyreSpec` parses sizes and derives diameter/circumference.
 4. **Decision helpers** — lookup and alternative-screening functions expose a small API that can later sit behind REST, CLI or catalog-import layers.
 
-The bundled in-module dataset remains deliberately tiny and unverified. Production callers should load an external verified dataset and use `require_verified=True`.
+The small in-module sample dataset remains deliberately unverified and exists only for demonstration/backward-compatible examples. Production-style callers should load `data/verified_fitments.json` or another independently verified dataset and use `require_verified=True`.
 
 ## Data quality contract
 
@@ -124,7 +132,7 @@ It does **not** verify rim-width compatibility, physical clearance, load index, 
 
 ## Roadmap
 
-- Verified, source-traceable motorcycle fitment dataset maintained outside demo code.
+- Expand the verified, source-traceable motorcycle fitment dataset while preserving authoritative provenance.
 - Variant-aware matching for model names and model-year changes.
 - Load/speed rating and rim-width rules.
 - Structured compatibility reasons instead of a boolean-only alternative check.
@@ -133,4 +141,4 @@ It does **not** verify rim-width compatibility, physical clearance, load index, 
 
 ## Status
 
-**In development.** The geometry, strict JSON ingestion and lookup core are tested and CI-backed. The repository intentionally does not ship a production motorcycle fitment dataset until authoritative source records can be verified and maintained.
+**In development.** The geometry, strict JSON ingestion and lookup core are tested and CI-backed, and the repository ships a limited source-traceable verified dataset. It is not yet a production-complete motorcycle fitment catalog because model/year coverage, variant handling and safety-critical compatibility attributes remain incomplete.

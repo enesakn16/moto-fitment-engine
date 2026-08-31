@@ -42,12 +42,41 @@ class GeometryAlternativeRankingTests(unittest.TestCase):
 
         self.assertEqual([str(item.tyre) for item in results], ["140/70-17"])
 
+    def test_width_tolerance_is_inclusive_and_rejects_wider_candidates(self) -> None:
+        original = TyreSpec.parse("150/70-17")
+        candidates = (
+            TyreSpec.parse("130/80-17"),  # exactly -20 mm: allowed by width bound
+            TyreSpec.parse("120/90-17"),  # -30 mm: rejected despite similar diameter
+            TyreSpec.parse("170/60-17"),  # exactly +20 mm: allowed by width bound
+            TyreSpec.parse("180/55-17"),  # +30 mm: rejected despite similar diameter
+        )
+
+        results = rank_geometry_alternatives(
+            original,
+            candidates,
+            max_delta_percent=5.0,
+            max_width_delta_mm=20,
+        )
+
+        self.assertEqual(
+            [str(item.tyre) for item in results],
+            ["130/80-17", "170/60-17"],
+        )
+        self.assertTrue(all(abs(item.width_delta_mm) <= 20 for item in results))
+
     def test_negative_tolerance_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "must be non-negative"):
             rank_geometry_alternatives(
                 TyreSpec.parse("150/70-17"),
                 (),
                 max_delta_percent=-0.1,
+            )
+
+        with self.assertRaisesRegex(ValueError, "must be non-negative"):
+            rank_geometry_alternatives(
+                TyreSpec.parse("150/70-17"),
+                (),
+                max_width_delta_mm=-1,
             )
 
 

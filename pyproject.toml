@@ -27,4 +27,4 @@ Repository = "https://github.com/enesakn16/moto-fitment-engine"
 Issues = "https://github.com/enesakn16/moto-fitment-engine/issues"
 
 [tool.setuptools]
-py-modules = ["moto_fitment"]
+py-modules = ["moto_fitment", "moto_alternatives"]

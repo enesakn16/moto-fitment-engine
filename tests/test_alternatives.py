@@ -115,7 +115,11 @@ class GeometryAlternativeRankingTests(unittest.TestCase):
         self.assertIs(result.fitment, fitment)
         self.assertEqual(
             [str(item.tyre) for item in result.front],
-            ["120/65-17", "110/80-17"],
+            ["110/80-17", "120/65-17"],
+        )
+        self.assertLess(
+            abs(result.front[0].diameter_delta_percent),
+            abs(result.front[1].diameter_delta_percent),
         )
         self.assertEqual(
             [str(item.tyre) for item in result.rear],

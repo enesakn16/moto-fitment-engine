@@ -11,7 +11,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from moto_fitment import TyreSpec, diameter_delta_percent, is_reasonable_alternative
+from moto_fitment import (
+    Fitment,
+    TyreSpec,
+    diameter_delta_percent,
+    find_fitment,
+    is_reasonable_alternative,
+)
 
 
 @dataclass(frozen=True)
@@ -22,6 +28,20 @@ class AlternativeEvaluation:
     diameter_delta_percent: float
     width_delta_mm: int
     aspect_ratio_delta: int
+
+
+@dataclass(frozen=True)
+class FitmentAlternativeResult:
+    """Verified OEM fitment plus geometry-screened front and rear candidates.
+
+    The candidate lists are intentionally geometry-only. Their presence does not
+    mean that load index, speed rating, rim-width approval, vehicle clearance,
+    ABS/TC behavior, homologation, or manufacturer restrictions have been checked.
+    """
+
+    fitment: Fitment
+    front: tuple[AlternativeEvaluation, ...]
+    rear: tuple[AlternativeEvaluation, ...]
 
 
 def rank_geometry_alternatives(
@@ -90,3 +110,47 @@ def rank_geometry_alternatives(
         )
     )
     return tuple(evaluations)
+
+
+def find_fitment_alternatives(
+    make: str,
+    model: str,
+    year: int,
+    candidates: Iterable[TyreSpec],
+    records: Iterable[Fitment],
+    *,
+    require_verified: bool = True,
+    max_delta_percent: float = 3.0,
+    max_width_delta_mm: int = 20,
+) -> FitmentAlternativeResult:
+    """Resolve OEM fitment and screen one tyre catalog for both wheel positions.
+
+    Production use is fail-closed by default: the matched fitment must have verified
+    provenance. ``require_verified=False`` exists for explicit demo/test scenarios.
+    The candidate iterable is materialized once so generators can be safely reused
+    for front and rear screening.
+    """
+    fitment = find_fitment(
+        make,
+        model,
+        year,
+        records,
+        require_verified=require_verified,
+    )
+    catalog = tuple(candidates)
+
+    return FitmentAlternativeResult(
+        fitment=fitment,
+        front=rank_geometry_alternatives(
+            fitment.front,
+            catalog,
+            max_delta_percent=max_delta_percent,
+            max_width_delta_mm=max_width_delta_mm,
+        ),
+        rear=rank_geometry_alternatives(
+            fitment.rear,
+            catalog,
+            max_delta_percent=max_delta_percent,
+            max_width_delta_mm=max_width_delta_mm,
+        ),
+    )

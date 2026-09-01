@@ -1,7 +1,7 @@
 import unittest
 
-from moto_alternatives import rank_geometry_alternatives
-from moto_fitment import TyreSpec
+from moto_alternatives import find_fitment_alternatives, rank_geometry_alternatives
+from moto_fitment import Fitment, TyreSpec
 
 
 class GeometryAlternativeRankingTests(unittest.TestCase):
@@ -77,6 +77,69 @@ class GeometryAlternativeRankingTests(unittest.TestCase):
                 TyreSpec.parse("150/70-17"),
                 (),
                 max_width_delta_mm=-1,
+            )
+
+    def test_vehicle_lookup_screens_catalog_for_both_wheels(self) -> None:
+        fitment = Fitment(
+            make="Example",
+            model="Tourer 500",
+            year_from=2026,
+            year_to=2026,
+            front=TyreSpec.parse("120/70-17"),
+            rear=TyreSpec.parse("160/60-17"),
+            source_note="Verified test fixture",
+            source_url="https://example.com/oem-fitment",
+            verified_on="2026-01-01",
+        )
+        catalog = (
+            TyreSpec.parse(value)
+            for value in (
+                "110/80-17",
+                "120/65-17",
+                "150/65-17",
+                "170/55-17",
+                "180/55-17",
+                "120/70-17",
+                "160/60-17",
+            )
+        )
+
+        result = find_fitment_alternatives(
+            " example ",
+            "Tourer 500",
+            2026,
+            catalog,
+            (fitment,),
+        )
+
+        self.assertIs(result.fitment, fitment)
+        self.assertEqual(
+            [str(item.tyre) for item in result.front],
+            ["120/65-17", "110/80-17"],
+        )
+        self.assertEqual(
+            [str(item.tyre) for item in result.rear],
+            ["150/65-17", "170/55-17"],
+        )
+
+    def test_vehicle_lookup_requires_verified_provenance_by_default(self) -> None:
+        unverified = Fitment(
+            make="Example",
+            model="Demo 125",
+            year_from=2026,
+            year_to=2026,
+            front=TyreSpec.parse("100/80-17"),
+            rear=TyreSpec.parse("120/70-17"),
+            source_note="Demo only",
+        )
+
+        with self.assertRaisesRegex(LookupError, "no verified provenance"):
+            find_fitment_alternatives(
+                "Example",
+                "Demo 125",
+                2026,
+                (),
+                (unverified,),
             )
 
 

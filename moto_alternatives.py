@@ -9,7 +9,9 @@ specific validation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Iterable
+from urllib.parse import urlparse
 
 from moto_fitment import (
     Fitment,
@@ -32,12 +34,15 @@ class AlternativeEvaluation:
 
 @dataclass(frozen=True)
 class CatalogTyre:
-    """One sellable tyre catalog item with the geometry used for screening."""
+    """One sellable tyre catalog item with optional commerce metadata."""
 
     sku: str
     brand: str
     product_name: str
     tyre: TyreSpec
+    stock_quantity: int | None = None
+    price: Decimal | None = None
+    product_url: str | None = None
 
     def __post_init__(self) -> None:
         if not self.sku.strip():
@@ -46,6 +51,19 @@ class CatalogTyre:
             raise ValueError("brand must not be empty")
         if not self.product_name.strip():
             raise ValueError("product_name must not be empty")
+        if self.stock_quantity is not None and self.stock_quantity < 0:
+            raise ValueError("stock_quantity must be non-negative")
+        if self.price is not None and self.price <= 0:
+            raise ValueError("price must be positive")
+        if self.product_url is not None:
+            parsed = urlparse(self.product_url)
+            if parsed.scheme != "https" or not parsed.netloc:
+                raise ValueError("product_url must be an absolute HTTPS URL")
+
+    @property
+    def is_in_stock(self) -> bool:
+        """Return true only when stock is known and greater than zero."""
+        return self.stock_quantity is not None and self.stock_quantity > 0
 
 
 @dataclass(frozen=True)
@@ -155,12 +173,15 @@ def rank_catalog_alternatives(
     *,
     max_delta_percent: float = 3.0,
     max_width_delta_mm: int = 20,
+    only_in_stock: bool = False,
 ) -> tuple[CatalogAlternativeEvaluation, ...]:
     """Screen sellable catalog rows while keeping SKU/product identity intact.
 
-    Unlike :func:`rank_geometry_alternatives`, multiple SKUs with the same tyre size
-    are preserved because they can represent different brands, patterns or stock
-    records. Duplicate SKU values are rejected to prevent ambiguous commerce output.
+    Multiple SKUs with the same tyre size are preserved because they can represent
+    different brands, patterns or stock records. Duplicate SKU values are rejected.
+    When ``only_in_stock`` is true, unknown stock and zero-stock rows are omitted so
+    callers can request a commerce-ready list without pretending unknown inventory is
+    available.
     """
     if max_delta_percent < 0:
         raise ValueError("max_delta_percent must be non-negative")
@@ -176,6 +197,8 @@ def rank_catalog_alternatives(
             raise ValueError(f"duplicate sku in catalog: {item.sku}")
         seen_skus.add(sku_key)
 
+        if only_in_stock and not item.is_in_stock:
+            continue
         if item.tyre == original:
             continue
 
@@ -265,6 +288,7 @@ def find_catalog_fitment_alternatives(
     require_verified: bool = True,
     max_delta_percent: float = 3.0,
     max_width_delta_mm: int = 20,
+    only_in_stock: bool = False,
 ) -> CatalogFitmentAlternativeResult:
     """Resolve a vehicle and return geometry-screened sellable SKU candidates."""
     fitment = find_fitment(
@@ -288,11 +312,13 @@ def find_catalog_fitment_alternatives(
             items,
             max_delta_percent=max_delta_percent,
             max_width_delta_mm=max_width_delta_mm,
+            only_in_stock=only_in_stock,
         ),
         rear=rank_catalog_alternatives(
             fitment.rear,
             items,
             max_delta_percent=max_delta_percent,
             max_width_delta_mm=max_width_delta_mm,
+            only_in_stock=only_in_stock,
         ),
     )

@@ -1,6 +1,12 @@
 import unittest
 
-from moto_alternatives import find_fitment_alternatives, rank_geometry_alternatives
+from moto_alternatives import (
+    CatalogTyre,
+    find_catalog_fitment_alternatives,
+    find_fitment_alternatives,
+    rank_catalog_alternatives,
+    rank_geometry_alternatives,
+)
 from moto_fitment import Fitment, TyreSpec
 
 
@@ -8,13 +14,13 @@ class GeometryAlternativeRankingTests(unittest.TestCase):
     def test_filters_and_ranks_candidates_deterministically(self) -> None:
         original = TyreSpec.parse("150/70-17")
         candidates = (
-            TyreSpec.parse("150/70-17"),  # exact OEM size: not an alternative
+            TyreSpec.parse("150/70-17"),
             TyreSpec.parse("160/60-17"),
             TyreSpec.parse("140/70-17"),
             TyreSpec.parse("150/65-17"),
-            TyreSpec.parse("140/70-17"),  # duplicate candidate
-            TyreSpec.parse("130/80-16"),  # wrong rim
-            TyreSpec.parse("150/60-17"),  # outside default 3% diameter tolerance
+            TyreSpec.parse("140/70-17"),
+            TyreSpec.parse("130/80-16"),
+            TyreSpec.parse("150/60-17"),
         )
 
         results = rank_geometry_alternatives(original, candidates)
@@ -45,10 +51,10 @@ class GeometryAlternativeRankingTests(unittest.TestCase):
     def test_width_tolerance_is_inclusive_and_rejects_wider_candidates(self) -> None:
         original = TyreSpec.parse("150/70-17")
         candidates = (
-            TyreSpec.parse("130/80-17"),  # exactly -20 mm: allowed by width bound
-            TyreSpec.parse("120/90-17"),  # -30 mm: rejected despite similar diameter
-            TyreSpec.parse("170/60-17"),  # exactly +20 mm: allowed by width bound
-            TyreSpec.parse("180/55-17"),  # +30 mm: rejected despite similar diameter
+            TyreSpec.parse("130/80-17"),
+            TyreSpec.parse("120/90-17"),
+            TyreSpec.parse("170/60-17"),
+            TyreSpec.parse("180/55-17"),
         )
 
         results = rank_geometry_alternatives(
@@ -146,6 +152,60 @@ class GeometryAlternativeRankingTests(unittest.TestCase):
                 (),
                 (unverified,),
             )
+
+    def test_catalog_screening_preserves_sellable_sku_identity(self) -> None:
+        original = TyreSpec.parse("120/70-17")
+        catalog = (
+            CatalogTyre("SKU-IRC-01", "IRC", "Road Winner", TyreSpec.parse("110/80-17")),
+            CatalogTyre("SKU-ANLAS-02", "Anlas", "Tournee", TyreSpec.parse("110/80-17")),
+            CatalogTyre("SKU-OEM", "Example", "OEM size", TyreSpec.parse("120/70-17")),
+            CatalogTyre("SKU-WRONG-RIM", "Example", "Wrong rim", TyreSpec.parse("120/70-16")),
+        )
+
+        results = rank_catalog_alternatives(original, catalog)
+
+        self.assertEqual(
+            [result.item.sku for result in results],
+            ["SKU-ANLAS-02", "SKU-IRC-01"],
+        )
+        self.assertTrue(all(str(result.item.tyre) == "110/80-17" for result in results))
+
+    def test_catalog_lookup_returns_front_and_rear_skus(self) -> None:
+        fitment = Fitment(
+            make="Example",
+            model="Commerce 500",
+            year_from=2026,
+            year_to=2026,
+            front=TyreSpec.parse("120/70-17"),
+            rear=TyreSpec.parse("160/60-17"),
+            source_note="Verified test fixture",
+            source_url="https://example.com/oem-fitment",
+            verified_on="2026-01-01",
+        )
+        catalog = (
+            CatalogTyre("FRONT-1", "IRC", "Front Candidate", TyreSpec.parse("110/80-17")),
+            CatalogTyre("REAR-1", "Anlas", "Rear Candidate", TyreSpec.parse("150/65-17")),
+        )
+
+        result = find_catalog_fitment_alternatives(
+            "Example",
+            "Commerce 500",
+            2026,
+            catalog,
+            (fitment,),
+        )
+
+        self.assertEqual([item.item.sku for item in result.front], ["FRONT-1"])
+        self.assertEqual([item.item.sku for item in result.rear], ["REAR-1"])
+
+    def test_catalog_rejects_duplicate_skus(self) -> None:
+        catalog = (
+            CatalogTyre("SKU-1", "IRC", "One", TyreSpec.parse("110/80-17")),
+            CatalogTyre(" sku-1 ", "Anlas", "Two", TyreSpec.parse("110/80-17")),
+        )
+
+        with self.assertRaisesRegex(ValueError, "duplicate sku"):
+            rank_catalog_alternatives(TyreSpec.parse("120/70-17"), catalog)
 
 
 if __name__ == "__main__":

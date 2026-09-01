@@ -123,8 +123,9 @@ class GeometryAlternativeRankingTests(unittest.TestCase):
         )
         self.assertEqual(
             [str(item.tyre) for item in result.rear],
-            ["150/65-17", "170/55-17"],
+            ["150/65-17", "170/55-17", "180/55-17"],
         )
+        self.assertTrue(all(abs(item.width_delta_mm) <= 20 for item in result.rear))
 
     def test_vehicle_lookup_requires_verified_provenance_by_default(self) -> None:
         unverified = Fitment(

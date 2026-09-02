@@ -33,6 +33,55 @@ class CatalogPresentationCandidate:
     def sku(self) -> str:
         return self.evaluation.item.sku
 
+    @property
+    def availability_label(self) -> str:
+        """Stable machine-readable inventory label for API/UI consumers."""
+        return {
+            AvailabilityTier.IN_STOCK: "in_stock",
+            AvailabilityTier.UNKNOWN: "unknown",
+            AvailabilityTier.OUT_OF_STOCK: "out_of_stock",
+        }[self.availability]
+
+    @property
+    def ranking_reason(self) -> str:
+        """Explain why this screened candidate is useful without claiming fitment safety.
+
+        The text deliberately describes presentation facts only. Technical eligibility
+        has already been decided by the fitment layer and is never restated as a safety
+        or compatibility guarantee here.
+        """
+        evaluation = self.evaluation
+        item = evaluation.item
+        inventory = {
+            AvailabilityTier.IN_STOCK: "stokta",
+            AvailabilityTier.UNKNOWN: "stok bilgisi bilinmiyor",
+            AvailabilityTier.OUT_OF_STOCK: "stokta değil",
+        }[self.availability]
+        price = f", fiyat {item.price:g}" if item.price is not None else ""
+        return (
+            f"{inventory}; çap farkı %{abs(evaluation.diameter_delta_percent):.2f}, "
+            f"genişlik farkı {abs(evaluation.width_delta_mm):g} mm, "
+            f"yanak oranı farkı {abs(evaluation.aspect_ratio_delta):g}{price}"
+        )
+
+    def as_dict(self) -> dict[str, object]:
+        """Return presentation metadata that can be serialized by an API layer."""
+        item = self.evaluation.item
+        return {
+            "sku": item.sku,
+            "brand": item.brand,
+            "product_name": item.product_name,
+            "tyre_size": str(item.tyre_size),
+            "availability": self.availability_label,
+            "stock_quantity": item.stock_quantity,
+            "price": item.price,
+            "product_url": item.product_url,
+            "diameter_delta_percent": self.evaluation.diameter_delta_percent,
+            "width_delta_mm": self.evaluation.width_delta_mm,
+            "aspect_ratio_delta": self.evaluation.aspect_ratio_delta,
+            "ranking_reason": self.ranking_reason,
+        }
+
 
 def availability_tier(evaluation: CatalogAlternativeEvaluation) -> AvailabilityTier:
     """Map inventory metadata to an explicit presentation tier."""

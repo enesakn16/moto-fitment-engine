@@ -1,4 +1,5 @@
 from decimal import Decimal
+import json
 import unittest
 
 from moto_alternatives import CatalogTyre, rank_catalog_alternatives
@@ -85,6 +86,32 @@ class CatalogPresentationRankingTests(unittest.TestCase):
         ranked = rank_catalog_for_display(screened)
 
         self.assertEqual([candidate.sku for candidate in ranked], ["LOW", "HIGH"])
+
+    def test_presentation_payload_is_json_safe_and_preserves_money_exactly(self) -> None:
+        original = TyreSpec.parse("120/70-17")
+        screened = rank_catalog_alternatives(
+            original,
+            (
+                CatalogTyre(
+                    "SKU-JSON",
+                    "Brand",
+                    "JSON candidate",
+                    TyreSpec.parse("110/80-17"),
+                    stock_quantity=3,
+                    price=Decimal("2499.90"),
+                    product_url="https://example.com/products/sku-json",
+                ),
+            ),
+        )
+
+        payload = rank_catalog_for_display(screened)[0].as_dict()
+        encoded = json.dumps(payload)
+        decoded = json.loads(encoded)
+
+        self.assertEqual(decoded["price"], "2499.90")
+        self.assertEqual(decoded["availability"], "in_stock")
+        self.assertEqual(decoded["stock_quantity"], 3)
+        self.assertEqual(decoded["product_url"], "https://example.com/products/sku-json")
 
 
 if __name__ == "__main__":

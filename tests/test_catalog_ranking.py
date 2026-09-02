@@ -43,7 +43,7 @@ class CatalogPresentationRankingTests(unittest.TestCase):
                     "EXPENSIVE-CLOSER",
                     "Brand",
                     "Expensive closer",
-                    TyreSpec.parse("120/65-17"),
+                    TyreSpec.parse("130/65-17"),
                     stock_quantity=1,
                     price=Decimal("5000"),
                 ),

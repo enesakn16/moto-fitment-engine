@@ -65,7 +65,12 @@ class CatalogPresentationCandidate:
         )
 
     def as_dict(self) -> dict[str, object]:
-        """Return presentation metadata that can be serialized by an API layer."""
+        """Return a JSON-safe presentation payload for API/UI consumers.
+
+        ``Decimal`` is intentionally serialized as a string so money remains exact
+        and callers can pass the result directly to standard-library JSON encoders
+        without silently introducing binary floating-point rounding.
+        """
         item = self.evaluation.item
         return {
             "sku": item.sku,
@@ -74,7 +79,7 @@ class CatalogPresentationCandidate:
             "tyre_size": str(item.tyre_size),
             "availability": self.availability_label,
             "stock_quantity": item.stock_quantity,
-            "price": item.price,
+            "price": str(item.price) if item.price is not None else None,
             "product_url": item.product_url,
             "diameter_delta_percent": self.evaluation.diameter_delta_percent,
             "width_delta_mm": self.evaluation.width_delta_mm,

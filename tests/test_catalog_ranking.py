@@ -2,9 +2,17 @@ from decimal import Decimal
 import json
 import unittest
 
-from moto_alternatives import CatalogTyre, rank_catalog_alternatives
-from moto_catalog_ranking import AvailabilityTier, rank_catalog_for_display
-from moto_fitment import TyreSpec
+from moto_alternatives import (
+    CatalogFitmentAlternativeResult,
+    CatalogTyre,
+    rank_catalog_alternatives,
+)
+from moto_catalog_ranking import (
+    AvailabilityTier,
+    build_catalog_fitment_payload,
+    rank_catalog_for_display,
+)
+from moto_fitment import Fitment, TyreSpec
 
 
 class CatalogPresentationRankingTests(unittest.TestCase):
@@ -112,6 +120,88 @@ class CatalogPresentationRankingTests(unittest.TestCase):
         self.assertEqual(decoded["availability"], "in_stock")
         self.assertEqual(decoded["stock_quantity"], 3)
         self.assertEqual(decoded["product_url"], "https://example.com/products/sku-json")
+
+    def test_vehicle_payload_is_json_safe_ranked_and_limited_per_axle(self) -> None:
+        fitment = Fitment(
+            make="Example",
+            model="Roadster 500",
+            year_from=2024,
+            year_to=2026,
+            front=TyreSpec.parse("120/70-17"),
+            rear=TyreSpec.parse("160/60-17"),
+            source_note="Manufacturer fitment table",
+            source_url="https://example.com/fitment",
+            verified_on="2026-08-01",
+        )
+        front = rank_catalog_alternatives(
+            fitment.front,
+            (
+                CatalogTyre(
+                    "F-UNKNOWN",
+                    "Brand",
+                    "Front unknown",
+                    TyreSpec.parse("130/65-17"),
+                    price=Decimal("2100.00"),
+                ),
+                CatalogTyre(
+                    "F-IN",
+                    "Brand",
+                    "Front available",
+                    TyreSpec.parse("110/80-17"),
+                    stock_quantity=4,
+                    price=Decimal("2500.00"),
+                ),
+            ),
+        )
+        rear = rank_catalog_alternatives(
+            fitment.rear,
+            (
+                CatalogTyre(
+                    "R-IN",
+                    "Brand",
+                    "Rear available",
+                    TyreSpec.parse("150/65-17"),
+                    stock_quantity=2,
+                    price=Decimal("3200.50"),
+                ),
+            ),
+        )
+        result = CatalogFitmentAlternativeResult(fitment=fitment, front=front, rear=rear)
+
+        payload = build_catalog_fitment_payload(result, limit_per_axle=1)
+        decoded = json.loads(json.dumps(payload))
+
+        self.assertEqual(decoded["vehicle"], {
+            "make": "Example",
+            "model": "Roadster 500",
+            "year_from": 2024,
+            "year_to": 2026,
+        })
+        self.assertEqual(decoded["oem"]["front_tyre_size"], "120/70-17")
+        self.assertEqual(decoded["oem"]["rear_tyre_size"], "160/60-17")
+        self.assertTrue(decoded["verification"]["is_verified"])
+        self.assertEqual(decoded["verification"]["source_url"], "https://example.com/fitment")
+        self.assertEqual([item["sku"] for item in decoded["candidates"]["front"]], ["F-IN"])
+        self.assertEqual([item["sku"] for item in decoded["candidates"]["rear"]], ["R-IN"])
+        self.assertEqual(decoded["candidates"]["rear"][0]["price"], "3200.50")
+        self.assertIn("ayrıca doğrulanmalıdır", decoded["disclaimer"])
+
+    def test_vehicle_payload_rejects_non_positive_limit(self) -> None:
+        fitment = Fitment(
+            make="Example",
+            model="Roadster 500",
+            year_from=2024,
+            year_to=2026,
+            front=TyreSpec.parse("120/70-17"),
+            rear=TyreSpec.parse("160/60-17"),
+            source_note="Manufacturer fitment table",
+            source_url="https://example.com/fitment",
+            verified_on="2026-08-01",
+        )
+        result = CatalogFitmentAlternativeResult(fitment=fitment, front=(), rear=())
+
+        with self.assertRaisesRegex(ValueError, "limit_per_axle must be positive"):
+            build_catalog_fitment_payload(result, limit_per_axle=0)
 
 
 if __name__ == "__main__":

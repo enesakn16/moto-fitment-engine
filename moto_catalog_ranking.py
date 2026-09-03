@@ -14,7 +14,10 @@ from typing import Iterable
 from moto_alternatives import (
     CatalogAlternativeEvaluation,
     CatalogFitmentAlternativeResult,
+    CatalogTyre,
+    find_catalog_fitment_alternatives,
 )
+from moto_fitment import Fitment
 
 
 class AvailabilityTier(IntEnum):
@@ -205,3 +208,45 @@ def build_catalog_fitment_payload(
             "ayrıca doğrulanmalıdır."
         ),
     }
+
+
+def resolve_catalog_fitment_payload(
+    make: str,
+    model: str,
+    year: int,
+    catalog: Iterable[CatalogTyre],
+    records: Iterable[Fitment],
+    *,
+    require_verified: bool = True,
+    max_delta_percent: float = 3.0,
+    max_width_delta_mm: int = 20,
+    only_in_stock: bool = False,
+    prefer_available: bool = True,
+    limit_per_axle: int | None = None,
+) -> dict[str, object]:
+    """Resolve a vehicle and return one commerce-ready, JSON-safe fitment payload.
+
+    This is the public orchestration boundary for API/front-end integrations. It
+    composes the existing fail-closed OEM lookup, geometry screening, commerce
+    ranking and serialization layers without duplicating their rules.
+
+    Verified provenance remains required by default. Setting ``only_in_stock``
+    filters unknown/zero inventory before presentation; ``prefer_available`` merely
+    changes ordering of candidates that already passed geometry screening.
+    """
+    result = find_catalog_fitment_alternatives(
+        make,
+        model,
+        year,
+        catalog,
+        records,
+        require_verified=require_verified,
+        max_delta_percent=max_delta_percent,
+        max_width_delta_mm=max_width_delta_mm,
+        only_in_stock=only_in_stock,
+    )
+    return build_catalog_fitment_payload(
+        result,
+        prefer_available=prefer_available,
+        limit_per_axle=limit_per_axle,
+    )

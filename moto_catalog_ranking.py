@@ -11,7 +11,10 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Iterable
 
-from moto_alternatives import CatalogAlternativeEvaluation
+from moto_alternatives import (
+    CatalogAlternativeEvaluation,
+    CatalogFitmentAlternativeResult,
+)
 
 
 class AvailabilityTier(IntEnum):
@@ -147,3 +150,58 @@ def rank_catalog_for_display(
 
     wrapped.sort(key=sort_key)
     return tuple(wrapped)
+
+
+def build_catalog_fitment_payload(
+    result: CatalogFitmentAlternativeResult,
+    *,
+    prefer_available: bool = True,
+    limit_per_axle: int | None = None,
+) -> dict[str, object]:
+    """Build a JSON-safe vehicle fitment response for API and frontend consumers.
+
+    The input must already come from the verified fitment + geometry screening layer.
+    This function performs presentation ranking and serialization only; it does not
+    upgrade geometry-screened alternatives into a compatibility or safety guarantee.
+
+    ``limit_per_axle`` is applied only after ranking so callers can return a compact
+    response without changing which candidates are considered technically eligible.
+    """
+    if limit_per_axle is not None and limit_per_axle <= 0:
+        raise ValueError("limit_per_axle must be positive when provided")
+
+    fitment = result.fitment
+    front = rank_catalog_for_display(result.front, prefer_available=prefer_available)
+    rear = rank_catalog_for_display(result.rear, prefer_available=prefer_available)
+
+    if limit_per_axle is not None:
+        front = front[:limit_per_axle]
+        rear = rear[:limit_per_axle]
+
+    return {
+        "vehicle": {
+            "make": fitment.make,
+            "model": fitment.model,
+            "year_from": fitment.year_from,
+            "year_to": fitment.year_to,
+        },
+        "oem": {
+            "front_tyre_size": str(fitment.front),
+            "rear_tyre_size": str(fitment.rear),
+        },
+        "verification": {
+            "is_verified": fitment.is_verified,
+            "source_note": fitment.source_note,
+            "source_url": fitment.source_url,
+            "verified_on": fitment.verified_on,
+        },
+        "candidates": {
+            "front": [candidate.as_dict() for candidate in front],
+            "rear": [candidate.as_dict() for candidate in rear],
+        },
+        "disclaimer": (
+            "Alternatifler geometri taramasından geçmiştir; yük/hız endeksi, jant "
+            "genişliği, fiziksel açıklık, ABS/TC, homologasyon ve üretici kısıtları "
+            "ayrıca doğrulanmalıdır."
+        ),
+    }

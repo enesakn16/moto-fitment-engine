@@ -11,6 +11,7 @@ from moto_catalog_ranking import (
     AvailabilityTier,
     build_catalog_fitment_payload,
     rank_catalog_for_display,
+    resolve_catalog_fitment_payload,
 )
 from moto_fitment import Fitment, TyreSpec
 
@@ -202,6 +203,88 @@ class CatalogPresentationRankingTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "limit_per_axle must be positive"):
             build_catalog_fitment_payload(result, limit_per_axle=0)
+
+    def test_resolve_service_matches_vehicle_filters_stock_and_limits_results(self) -> None:
+        fitment = Fitment(
+            make="Example",
+            model="Roadster 500",
+            year_from=2024,
+            year_to=2026,
+            front=TyreSpec.parse("120/70-17"),
+            rear=TyreSpec.parse("160/60-17"),
+            source_note="Manufacturer fitment table",
+            source_url="https://example.com/fitment",
+            verified_on="2026-08-01",
+        )
+        catalog = (
+            CatalogTyre(
+                "F-IN",
+                "Brand",
+                "Front available",
+                TyreSpec.parse("130/65-17"),
+                stock_quantity=2,
+                price=Decimal("2300.00"),
+            ),
+            CatalogTyre(
+                "F-UNKNOWN",
+                "Brand",
+                "Front unknown",
+                TyreSpec.parse("110/80-17"),
+                price=Decimal("2100.00"),
+            ),
+            CatalogTyre(
+                "R-IN",
+                "Brand",
+                "Rear available",
+                TyreSpec.parse("150/65-17"),
+                stock_quantity=3,
+                price=Decimal("3200.50"),
+            ),
+            CatalogTyre(
+                "R-OUT",
+                "Brand",
+                "Rear sold out",
+                TyreSpec.parse("170/55-17"),
+                stock_quantity=0,
+                price=Decimal("3000.00"),
+            ),
+        )
+
+        payload = resolve_catalog_fitment_payload(
+            " example ",
+            "roadster   500",
+            2025,
+            catalog,
+            (fitment,),
+            only_in_stock=True,
+            limit_per_axle=1,
+        )
+        decoded = json.loads(json.dumps(payload))
+
+        self.assertEqual(decoded["vehicle"]["make"], "Example")
+        self.assertEqual(decoded["vehicle"]["model"], "Roadster 500")
+        self.assertEqual([item["sku"] for item in decoded["candidates"]["front"]], ["F-IN"])
+        self.assertEqual([item["sku"] for item in decoded["candidates"]["rear"]], ["R-IN"])
+        self.assertEqual(decoded["candidates"]["rear"][0]["price"], "3200.50")
+
+    def test_resolve_service_fails_closed_for_unverified_fitment_by_default(self) -> None:
+        unverified = Fitment(
+            make="Example",
+            model="Prototype 400",
+            year_from=2026,
+            year_to=2026,
+            front=TyreSpec.parse("110/70-17"),
+            rear=TyreSpec.parse("140/70-17"),
+        )
+
+        with self.assertRaises(ValueError):
+            resolve_catalog_fitment_payload(
+                "Example",
+                "Prototype 400",
+                2026,
+                (),
+                (unverified,),
+            )
 
 
 if __name__ == "__main__":

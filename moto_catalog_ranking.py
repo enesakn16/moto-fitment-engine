@@ -76,7 +76,7 @@ class CatalogPresentationCandidate:
             "sku": item.sku,
             "brand": item.brand,
             "product_name": item.product_name,
-            "tyre_size": str(item.tyre_size),
+            "tyre_size": str(item.tyre),
             "availability": self.availability_label,
             "stock_quantity": item.stock_quantity,
             "price": str(item.price) if item.price is not None else None,

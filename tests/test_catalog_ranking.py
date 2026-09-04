@@ -278,7 +278,7 @@ class CatalogPresentationRankingTests(unittest.TestCase):
             source_note="Unverified test fixture",
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LookupError):
             resolve_catalog_fitment_payload(
                 "Example",
                 "Prototype 400",

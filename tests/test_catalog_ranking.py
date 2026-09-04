@@ -275,6 +275,7 @@ class CatalogPresentationRankingTests(unittest.TestCase):
             year_to=2026,
             front=TyreSpec.parse("110/70-17"),
             rear=TyreSpec.parse("140/70-17"),
+            source_note="Unverified test fixture",
         )
 
         with self.assertRaises(ValueError):

@@ -203,9 +203,10 @@ def build_catalog_fitment_payload(
             "rear": [candidate.as_dict() for candidate in rear],
         },
         "disclaimer": (
-            "Alternatifler geometri taramasından geçmiştir; yük/hız endeksi, jant "
-            "genişliği, fiziksel açıklık, ABS/TC, homologasyon ve üretici kısıtları "
-            "ayrıca doğrulanmalıdır."
+            "Alternatifler yapılandırılmış teknik taramadan geçmiştir; jant genişliği, "
+            "fiziksel açıklık, ABS/TC, homologasyon ve üretici kısıtları ayrıca "
+            "doğrulanmalıdır. Yük/hız eşikleri yalnız çağıran taraf doğrulanmış OEM "
+            "minimumlarını sağladığında fail-closed uygulanır."
         ),
     }
 
@@ -221,18 +222,25 @@ def resolve_catalog_fitment_payload(
     max_delta_percent: float = 3.0,
     max_width_delta_mm: int = 20,
     only_in_stock: bool = False,
+    front_minimum_load_index: int | None = None,
+    rear_minimum_load_index: int | None = None,
+    front_minimum_speed_kmh: int | None = None,
+    rear_minimum_speed_kmh: int | None = None,
     prefer_available: bool = True,
     limit_per_axle: int | None = None,
 ) -> dict[str, object]:
     """Resolve a vehicle and return one commerce-ready, JSON-safe fitment payload.
 
     This is the public orchestration boundary for API/front-end integrations. It
-    composes the existing fail-closed OEM lookup, geometry screening, commerce
+    composes the existing fail-closed OEM lookup, technical screening, commerce
     ranking and serialization layers without duplicating their rules.
 
-    Verified provenance remains required by default. Setting ``only_in_stock``
-    filters unknown/zero inventory before presentation; ``prefer_available`` merely
-    changes ordering of candidates that already passed geometry screening.
+    Verified provenance remains required by default. Load-index and speed-capability
+    minimums are axle-specific and fail closed when supplied: catalog rows with a
+    missing rating or a rating below the verified OEM minimum are omitted. Callers
+    must never invent those thresholds. ``only_in_stock`` filters unknown/zero
+    inventory before presentation; ``prefer_available`` only changes ordering of
+    candidates that already passed technical screening.
     """
     result = find_catalog_fitment_alternatives(
         make,
@@ -244,6 +252,10 @@ def resolve_catalog_fitment_payload(
         max_delta_percent=max_delta_percent,
         max_width_delta_mm=max_width_delta_mm,
         only_in_stock=only_in_stock,
+        front_minimum_load_index=front_minimum_load_index,
+        rear_minimum_load_index=rear_minimum_load_index,
+        front_minimum_speed_kmh=front_minimum_speed_kmh,
+        rear_minimum_speed_kmh=rear_minimum_speed_kmh,
     )
     return build_catalog_fitment_payload(
         result,

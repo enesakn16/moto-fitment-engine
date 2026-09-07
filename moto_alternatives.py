@@ -34,7 +34,12 @@ class AlternativeEvaluation:
 
 @dataclass(frozen=True)
 class CatalogTyre:
-    """One sellable tyre catalog item with optional commerce metadata."""
+    """One sellable tyre catalog item with optional commerce and safety metadata.
+
+    ``load_index`` and ``speed_kmh`` are deliberately numeric. This keeps the core
+    screening policy independent from presentation symbols and lets upstream importers
+    normalize supplier-specific rating formats before they reach the safety boundary.
+    """
 
     sku: str
     brand: str
@@ -43,6 +48,8 @@ class CatalogTyre:
     stock_quantity: int | None = None
     price: Decimal | None = None
     product_url: str | None = None
+    load_index: int | None = None
+    speed_kmh: int | None = None
 
     def __post_init__(self) -> None:
         if not self.sku.strip():
@@ -59,6 +66,18 @@ class CatalogTyre:
             parsed = urlparse(self.product_url)
             if parsed.scheme != "https" or not parsed.netloc:
                 raise ValueError("product_url must be an absolute HTTPS URL")
+        if self.load_index is not None and (
+            isinstance(self.load_index, bool)
+            or not isinstance(self.load_index, int)
+            or self.load_index <= 0
+        ):
+            raise ValueError("load_index must be a positive integer when provided")
+        if self.speed_kmh is not None and (
+            isinstance(self.speed_kmh, bool)
+            or not isinstance(self.speed_kmh, int)
+            or self.speed_kmh <= 0
+        ):
+            raise ValueError("speed_kmh must be a positive integer when provided")
 
     @property
     def is_in_stock(self) -> bool:
@@ -167,6 +186,13 @@ def rank_geometry_alternatives(
     return tuple(evaluations)
 
 
+def _validate_positive_threshold(value: int | None, name: str) -> None:
+    if value is not None and (
+        isinstance(value, bool) or not isinstance(value, int) or value <= 0
+    ):
+        raise ValueError(f"{name} must be a positive integer when provided")
+
+
 def rank_catalog_alternatives(
     original: TyreSpec,
     catalog: Iterable[CatalogTyre],
@@ -174,6 +200,8 @@ def rank_catalog_alternatives(
     max_delta_percent: float = 3.0,
     max_width_delta_mm: int = 20,
     only_in_stock: bool = False,
+    minimum_load_index: int | None = None,
+    minimum_speed_kmh: int | None = None,
 ) -> tuple[CatalogAlternativeEvaluation, ...]:
     """Screen sellable catalog rows while keeping SKU/product identity intact.
 
@@ -182,11 +210,18 @@ def rank_catalog_alternatives(
     When ``only_in_stock`` is true, unknown stock and zero-stock rows are omitted so
     callers can request a commerce-ready list without pretending unknown inventory is
     available.
+
+    When a minimum load index or speed capability is supplied, screening becomes
+    fail-closed for that criterion: candidates with missing safety metadata are
+    rejected alongside candidates below the required threshold. Callers must source
+    those minimums from verified OEM/vehicle data; this function never invents them.
     """
     if max_delta_percent < 0:
         raise ValueError("max_delta_percent must be non-negative")
     if max_width_delta_mm < 0:
         raise ValueError("max_width_delta_mm must be non-negative")
+    _validate_positive_threshold(minimum_load_index, "minimum_load_index")
+    _validate_positive_threshold(minimum_speed_kmh, "minimum_speed_kmh")
 
     seen_skus: set[str] = set()
     evaluations: list[CatalogAlternativeEvaluation] = []
@@ -198,6 +233,14 @@ def rank_catalog_alternatives(
         seen_skus.add(sku_key)
 
         if only_in_stock and not item.is_in_stock:
+            continue
+        if minimum_load_index is not None and (
+            item.load_index is None or item.load_index < minimum_load_index
+        ):
+            continue
+        if minimum_speed_kmh is not None and (
+            item.speed_kmh is None or item.speed_kmh < minimum_speed_kmh
+        ):
             continue
         if item.tyre == original:
             continue
@@ -289,8 +332,18 @@ def find_catalog_fitment_alternatives(
     max_delta_percent: float = 3.0,
     max_width_delta_mm: int = 20,
     only_in_stock: bool = False,
+    front_minimum_load_index: int | None = None,
+    rear_minimum_load_index: int | None = None,
+    front_minimum_speed_kmh: int | None = None,
+    rear_minimum_speed_kmh: int | None = None,
 ) -> CatalogFitmentAlternativeResult:
-    """Resolve a vehicle and return geometry-screened sellable SKU candidates."""
+    """Resolve a vehicle and return safety- and geometry-screened sellable SKUs.
+
+    Safety minimums are axle-specific because front and rear requirements can differ.
+    If a minimum is supplied, catalog rows missing that rating are rejected rather
+    than treated as acceptable. The caller is responsible for providing verified
+    vehicle/OEM minimums; omission preserves the legacy geometry-only behavior.
+    """
     fitment = find_fitment(
         make,
         model,
@@ -313,6 +366,8 @@ def find_catalog_fitment_alternatives(
             max_delta_percent=max_delta_percent,
             max_width_delta_mm=max_width_delta_mm,
             only_in_stock=only_in_stock,
+            minimum_load_index=front_minimum_load_index,
+            minimum_speed_kmh=front_minimum_speed_kmh,
         ),
         rear=rank_catalog_alternatives(
             fitment.rear,
@@ -320,5 +375,7 @@ def find_catalog_fitment_alternatives(
             max_delta_percent=max_delta_percent,
             max_width_delta_mm=max_width_delta_mm,
             only_in_stock=only_in_stock,
+            minimum_load_index=rear_minimum_load_index,
+            minimum_speed_kmh=rear_minimum_speed_kmh,
         ),
     )

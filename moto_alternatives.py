@@ -321,6 +321,15 @@ def find_fitment_alternatives(
     )
 
 
+def _effective_minimum(explicit: int | None, verified_oem: int | None) -> int | None:
+    """Return the strictest supplied threshold without permitting OEM downgrades."""
+    if verified_oem is None:
+        return explicit
+    if explicit is None:
+        return verified_oem
+    return max(explicit, verified_oem)
+
+
 def find_catalog_fitment_alternatives(
     make: str,
     model: str,
@@ -339,10 +348,10 @@ def find_catalog_fitment_alternatives(
 ) -> CatalogFitmentAlternativeResult:
     """Resolve a vehicle and return safety- and geometry-screened sellable SKUs.
 
-    Safety minimums are axle-specific because front and rear requirements can differ.
-    If a minimum is supplied, catalog rows missing that rating are rejected rather
-    than treated as acceptable. The caller is responsible for providing verified
-    vehicle/OEM minimums; omission preserves the legacy geometry-only behavior.
+    Verified axle-specific OEM minimums stored on the matched fitment are applied
+    automatically. Optional caller thresholds may only make the policy stricter;
+    they can never weaken verified OEM requirements. Records without complete verified
+    safety metadata preserve the explicit-threshold/geometry-only legacy behavior.
     """
     fitment = find_fitment(
         make,
@@ -352,6 +361,26 @@ def find_catalog_fitment_alternatives(
         require_verified=require_verified,
     )
     items = tuple(catalog)
+
+    # Validate caller-provided values even when verified OEM values will be stricter.
+    _validate_positive_threshold(front_minimum_load_index, "front_minimum_load_index")
+    _validate_positive_threshold(rear_minimum_load_index, "rear_minimum_load_index")
+    _validate_positive_threshold(front_minimum_speed_kmh, "front_minimum_speed_kmh")
+    _validate_positive_threshold(rear_minimum_speed_kmh, "rear_minimum_speed_kmh")
+
+    if fitment.has_verified_safety_requirements:
+        front_minimum_load_index = _effective_minimum(
+            front_minimum_load_index, fitment.front_minimum_load_index
+        )
+        rear_minimum_load_index = _effective_minimum(
+            rear_minimum_load_index, fitment.rear_minimum_load_index
+        )
+        front_minimum_speed_kmh = _effective_minimum(
+            front_minimum_speed_kmh, fitment.front_minimum_speed_kmh
+        )
+        rear_minimum_speed_kmh = _effective_minimum(
+            rear_minimum_speed_kmh, fitment.rear_minimum_speed_kmh
+        )
 
     # Validate duplicate SKU identity once for the shared catalog before screening.
     sku_keys = [item.sku.strip().casefold() for item in items]

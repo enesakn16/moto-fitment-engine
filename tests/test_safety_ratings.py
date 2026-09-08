@@ -142,6 +142,72 @@ class SafetyRatingScreeningTests(unittest.TestCase):
         self.assertEqual([item.item.sku for item in result.front], ["FRONT-SAFE"])
         self.assertEqual([item.item.sku for item in result.rear], ["REAR-SAFE"])
 
+    def test_verified_fitment_safety_requirements_are_applied_automatically(self) -> None:
+        fitment = Fitment(
+            make="Example",
+            model="OEM Safety 700",
+            year_from=2026,
+            year_to=2026,
+            front=TyreSpec.parse("120/70-17"),
+            rear=TyreSpec.parse("160/60-17"),
+            source_note="Verified OEM safety fixture",
+            source_url="https://example.com/oem-safety-fitment",
+            verified_on="2026-09-01",
+            front_minimum_load_index=58,
+            rear_minimum_load_index=69,
+            front_minimum_speed_kmh=210,
+            rear_minimum_speed_kmh=240,
+        )
+        catalog = (
+            CatalogTyre(
+                "FRONT-OEM-SAFE",
+                "Example",
+                "Front meets OEM minimum",
+                TyreSpec.parse("110/80-17"),
+                load_index=58,
+                speed_kmh=210,
+            ),
+            CatalogTyre(
+                "FRONT-BELOW-OEM",
+                "Example",
+                "Front below OEM load minimum",
+                TyreSpec.parse("110/80-17"),
+                load_index=57,
+                speed_kmh=210,
+            ),
+            CatalogTyre(
+                "REAR-OEM-SAFE",
+                "Example",
+                "Rear meets OEM minimum",
+                TyreSpec.parse("150/65-17"),
+                load_index=69,
+                speed_kmh=240,
+            ),
+            CatalogTyre(
+                "REAR-BELOW-OEM",
+                "Example",
+                "Rear below OEM speed minimum",
+                TyreSpec.parse("150/65-17"),
+                load_index=69,
+                speed_kmh=210,
+            ),
+        )
+
+        result = find_catalog_fitment_alternatives(
+            "Example",
+            "OEM Safety 700",
+            2026,
+            catalog,
+            (fitment,),
+            front_minimum_load_index=40,
+            rear_minimum_load_index=40,
+            front_minimum_speed_kmh=120,
+            rear_minimum_speed_kmh=120,
+        )
+
+        self.assertEqual([item.item.sku for item in result.front], ["FRONT-OEM-SAFE"])
+        self.assertEqual([item.item.sku for item in result.rear], ["REAR-OEM-SAFE"])
+
     def test_invalid_safety_thresholds_are_rejected(self) -> None:
         for invalid in (0, -1, True):
             with self.subTest(invalid=invalid):

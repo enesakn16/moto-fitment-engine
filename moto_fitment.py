@@ -58,6 +58,10 @@ class Fitment:
     source_note: str
     source_url: str | None = None
     verified_on: str | None = None
+    front_minimum_load_index: int | None = None
+    rear_minimum_load_index: int | None = None
+    front_minimum_speed_kmh: int | None = None
+    rear_minimum_speed_kmh: int | None = None
 
     def supports_year(self, year: int) -> bool:
         return self.year_from <= year <= self.year_to
@@ -83,6 +87,25 @@ class Fitment:
             return False
 
         return verified_date <= date.today()
+
+    @property
+    def has_verified_safety_requirements(self) -> bool:
+        """Return whether complete axle-specific load/speed minimums are present.
+
+        A partial set is never considered usable because applying only some OEM safety
+        constraints could make downstream catalogue filtering look safer than it is.
+        JSON-loaded records enforce this all-or-nothing rule at ingestion time.
+        """
+        values = (
+            self.front_minimum_load_index,
+            self.rear_minimum_load_index,
+            self.front_minimum_speed_kmh,
+            self.rear_minimum_speed_kmh,
+        )
+        return self.is_verified and all(
+            isinstance(value, int) and not isinstance(value, bool) and value > 0
+            for value in values
+        )
 
 
 # Deliberately small demo dataset. Values are examples and are not a substitute
@@ -115,7 +138,7 @@ def _normalize(value: str) -> str:
 
 
 _MAX_JSON_BYTES = 1_000_000
-_JSON_FIELDS = {
+_JSON_REQUIRED_FIELDS = {
     "make",
     "model",
     "year_from",
@@ -126,6 +149,36 @@ _JSON_FIELDS = {
     "source_url",
     "verified_on",
 }
+_JSON_SAFETY_FIELDS = {
+    "front_minimum_load_index",
+    "rear_minimum_load_index",
+    "front_minimum_speed_kmh",
+    "rear_minimum_speed_kmh",
+}
+_JSON_FIELDS = _JSON_REQUIRED_FIELDS | _JSON_SAFETY_FIELDS
+
+
+def _parse_safety_requirements(item: dict, index: int) -> dict[str, int | None]:
+    present = _JSON_SAFETY_FIELDS & set(item)
+    if present and present != _JSON_SAFETY_FIELDS:
+        missing = _JSON_SAFETY_FIELDS - present
+        raise ValueError(
+            f"Fitment record {index} has partial OEM safety requirements; missing: "
+            f"{', '.join(sorted(missing))}"
+        )
+
+    if not present:
+        return {field: None for field in _JSON_SAFETY_FIELDS}
+
+    parsed: dict[str, int | None] = {}
+    for field in _JSON_SAFETY_FIELDS:
+        value = item[field]
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(
+                f"Fitment record {index} has invalid positive integer {field}"
+            )
+        parsed[field] = value
+    return parsed
 
 
 def load_fitments_json(path: str | Path) -> tuple[Fitment, ...]:
@@ -133,8 +186,10 @@ def load_fitments_json(path: str | Path) -> tuple[Fitment, ...]:
 
     The loader refuses unknown fields, oversized files, invalid year ranges,
     malformed tyre sizes, overlapping make/model/year ranges, and records without
-    verified provenance. Production data therefore cannot silently downgrade to
-    the permissive demo-data behavior or become lookup-order dependent.
+    verified provenance. OEM load/speed minimums are optional for backwards-compatible
+    datasets, but when supplied they must be complete for both axles and strictly valid.
+    Production data therefore cannot silently downgrade to a partial safety policy or
+    become lookup-order dependent.
     """
     source = Path(path)
     if not source.is_file():
@@ -161,7 +216,7 @@ def load_fitments_json(path: str | Path) -> tuple[Fitment, ...]:
             raise ValueError(f"Fitment record {index} must be a JSON object")
 
         unknown = set(item) - _JSON_FIELDS
-        missing = _JSON_FIELDS - set(item)
+        missing = _JSON_REQUIRED_FIELDS - set(item)
         if unknown:
             raise ValueError(
                 f"Fitment record {index} has unknown fields: {', '.join(sorted(unknown))}"
@@ -199,6 +254,7 @@ def load_fitments_json(path: str | Path) -> tuple[Fitment, ...]:
         if not isinstance(front_value, str) or not isinstance(rear_value, str):
             raise ValueError(f"Fitment record {index} tyre sizes must be strings")
 
+        safety_requirements = _parse_safety_requirements(item, index)
         record = Fitment(
             make=make.strip(),
             model=model.strip(),
@@ -209,9 +265,12 @@ def load_fitments_json(path: str | Path) -> tuple[Fitment, ...]:
             source_note=source_note.strip(),
             source_url=source_url.strip(),
             verified_on=verified_on.strip(),
+            **safety_requirements,
         )
         if not record.is_verified:
             raise ValueError(f"Fitment record {index} does not have verified provenance")
+        if _JSON_SAFETY_FIELDS <= set(item) and not record.has_verified_safety_requirements:
+            raise ValueError(f"Fitment record {index} has unusable OEM safety requirements")
 
         make_key = _normalize(record.make)
         model_key = _normalize(record.model)
@@ -287,6 +346,7 @@ def _self_test() -> None:
     assert str(pcx.front) == "110/70-14"
     assert str(pcx.rear) == "130/70-13"
     assert not pcx.is_verified
+    assert not pcx.has_verified_safety_requirements
 
     try:
         find_fitment("Honda", "PCX 125", 2023, require_verified=True)
@@ -305,8 +365,13 @@ def _self_test() -> None:
         source_note="Self-test fixture",
         source_url="https://example.com/fitment",
         verified_on="2026-01-01",
+        front_minimum_load_index=52,
+        rear_minimum_load_index=58,
+        front_minimum_speed_kmh=180,
+        rear_minimum_speed_kmh=180,
     )
     assert verified.is_verified
+    assert verified.has_verified_safety_requirements
     assert find_fitment(
         "Example", "Verified 125", 2026, (verified,), require_verified=True
     ) == verified

@@ -267,6 +267,78 @@ class CatalogPresentationRankingTests(unittest.TestCase):
         self.assertEqual([item["sku"] for item in decoded["candidates"]["rear"]], ["R-IN"])
         self.assertEqual(decoded["candidates"]["rear"][0]["price"], "3200.50")
 
+    def test_resolve_service_applies_axle_specific_safety_thresholds_fail_closed(self) -> None:
+        fitment = Fitment(
+            make="Example",
+            model="Roadster 500",
+            year_from=2024,
+            year_to=2026,
+            front=TyreSpec.parse("120/70-17"),
+            rear=TyreSpec.parse("160/60-17"),
+            source_note="Manufacturer fitment table",
+            source_url="https://example.com/fitment",
+            verified_on="2026-08-01",
+        )
+        catalog = (
+            CatalogTyre(
+                "F-SAFE",
+                "Brand",
+                "Front safe",
+                TyreSpec.parse("130/65-17"),
+                stock_quantity=2,
+                load_index=58,
+                speed_kmh=210,
+            ),
+            CatalogTyre(
+                "F-MISSING-RATING",
+                "Brand",
+                "Front missing rating",
+                TyreSpec.parse("110/80-17"),
+                stock_quantity=2,
+            ),
+            CatalogTyre(
+                "R-SAFE",
+                "Brand",
+                "Rear safe",
+                TyreSpec.parse("150/65-17"),
+                stock_quantity=2,
+                load_index=69,
+                speed_kmh=240,
+            ),
+            CatalogTyre(
+                "R-UNDER-RATED",
+                "Brand",
+                "Rear under rated",
+                TyreSpec.parse("170/55-17"),
+                stock_quantity=2,
+                load_index=68,
+                speed_kmh=210,
+            ),
+        )
+
+        payload = resolve_catalog_fitment_payload(
+            "Example",
+            "Roadster 500",
+            2025,
+            catalog,
+            (fitment,),
+            only_in_stock=True,
+            front_minimum_load_index=58,
+            rear_minimum_load_index=69,
+            front_minimum_speed_kmh=210,
+            rear_minimum_speed_kmh=240,
+        )
+
+        self.assertEqual(
+            [item["sku"] for item in payload["candidates"]["front"]],
+            ["F-SAFE"],
+        )
+        self.assertEqual(
+            [item["sku"] for item in payload["candidates"]["rear"]],
+            ["R-SAFE"],
+        )
+        self.assertIn("yük/hız", payload["disclaimer"])
+
     def test_resolve_service_fails_closed_for_unverified_fitment_by_default(self) -> None:
         unverified = Fitment(
             make="Example",

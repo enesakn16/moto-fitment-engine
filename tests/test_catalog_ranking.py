@@ -337,7 +337,7 @@ class CatalogPresentationRankingTests(unittest.TestCase):
             [item["sku"] for item in payload["candidates"]["rear"]],
             ["R-SAFE"],
         )
-        self.assertIn("yük/hız", payload["disclaimer"])
+        self.assertIn("Yük/hız", payload["disclaimer"])
 
     def test_resolve_service_fails_closed_for_unverified_fitment_by_default(self) -> None:
         unverified = Fitment(

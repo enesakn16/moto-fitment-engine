@@ -4,12 +4,44 @@ from pathlib import Path
 from moto_alternatives import (
     CatalogTyre,
     find_catalog_fitment_alternatives,
+    parse_service_description,
     rank_catalog_alternatives,
 )
 from moto_fitment import Fitment, TyreSpec, load_fitments_json
 
 
 class SafetyRatingScreeningTests(unittest.TestCase):
+    def test_service_description_parser_normalizes_known_ratings(self) -> None:
+        cases = {
+            "58W": (58, 270),
+            "63P": (63, 150),
+            " 54 h ": (54, 210),
+            "69V": (69, 240),
+            "73Y": (73, 300),
+        }
+
+        for value, expected in cases.items():
+            with self.subTest(value=value):
+                self.assertEqual(parse_service_description(value), expected)
+
+    def test_service_description_parser_fails_closed_for_ambiguous_or_invalid_values(self) -> None:
+        for value in (
+            "58Z",
+            "58(Y)",
+            "120/70 ZR17 58W",
+            "W58",
+            "58",
+            "0W",
+            "58WW",
+            "",
+        ):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    parse_service_description(value)
+
+        with self.assertRaises(TypeError):
+            parse_service_description(58)  # type: ignore[arg-type]
+
     def test_catalog_screening_fails_closed_for_missing_or_insufficient_ratings(self) -> None:
         original = TyreSpec.parse("120/70-17")
         catalog = (

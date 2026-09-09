@@ -8,6 +8,7 @@ specific validation.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Iterable
@@ -20,6 +21,59 @@ from moto_fitment import (
     find_fitment,
     is_reasonable_alternative,
 )
+
+
+# Service-description speed symbols are normalized at the catalog boundary so the
+# safety layer can continue comparing integer km/h capabilities. Deliberately exclude
+# ambiguous Z/(Y) forms: they do not represent one finite capability without further
+# manufacturer context and therefore must not be guessed by an importer.
+_SPEED_SYMBOL_TO_KMH: dict[str, int] = {
+    "F": 80,
+    "J": 100,
+    "K": 110,
+    "L": 120,
+    "M": 130,
+    "N": 140,
+    "P": 150,
+    "Q": 160,
+    "R": 170,
+    "S": 180,
+    "T": 190,
+    "U": 200,
+    "H": 210,
+    "V": 240,
+    "W": 270,
+    "Y": 300,
+}
+_SERVICE_DESCRIPTION_RE = re.compile(r"^(?P<load>\d{1,3})\s*(?P<speed>[A-Za-z])$")
+
+
+def parse_service_description(value: str) -> tuple[int, int]:
+    """Parse a tyre service description such as ``58W`` into numeric safety data.
+
+    Returns ``(load_index, speed_kmh)``. Whitespace and letter case are normalized,
+    but malformed, unknown or ambiguous symbols fail closed instead of being guessed.
+    This function intentionally parses only the service description, not a full tyre
+    size such as ``120/70 ZR17 58W``.
+    """
+    if not isinstance(value, str):
+        raise TypeError("service description must be a string")
+
+    match = _SERVICE_DESCRIPTION_RE.fullmatch(value.strip())
+    if match is None:
+        raise ValueError("service description must look like '<load index><speed symbol>'")
+
+    load_index = int(match.group("load"))
+    if load_index <= 0:
+        raise ValueError("load index must be positive")
+
+    speed_symbol = match.group("speed").upper()
+    try:
+        speed_kmh = _SPEED_SYMBOL_TO_KMH[speed_symbol]
+    except KeyError as exc:
+        raise ValueError(f"unsupported or ambiguous speed symbol: {speed_symbol}") from exc
+
+    return load_index, speed_kmh
 
 
 @dataclass(frozen=True)

@@ -19,7 +19,11 @@
     "rear": "160/60ZR17",
     "source_note": "Official Honda UK 2025 CB750 Hornet specifications. Front tyre 120/70ZR17M/C (58W), rear tyre 160/60ZR17M/C (69W).",
     "source_url": "https://www.honda.co.uk/motorcycles/range/street/hornet/specifications-and-price.html",
-    "verified_on": "2026-08-27"
+    "verified_on": "2026-08-27",
+    "front_minimum_load_index": 58,
+    "rear_minimum_load_index": 69,
+    "front_minimum_speed_kmh": 270,
+    "rear_minimum_speed_kmh": 270
   },
   {
     "make": "Honda",
@@ -30,7 +34,11 @@
     "rear": "130/70-13",
     "source_note": "Official Honda UK PCX125 2025 specifications. Front tyre 110/70-14M/C 50P, rear tyre 130/70-13M/C 63P.",
     "source_url": "https://www.honda.co.uk/motorcycles/range/scooter/pcx-125/specifications.html",
-    "verified_on": "2026-08-28"
+    "verified_on": "2026-08-28",
+    "front_minimum_load_index": 50,
+    "rear_minimum_load_index": 63,
+    "front_minimum_speed_kmh": 150,
+    "rear_minimum_speed_kmh": 150
   },
   {
     "make": "Honda",
@@ -41,7 +49,11 @@
     "rear": "140/70-14",
     "source_note": "Official Honda UK ADV350 2026 specifications. Front tyre 120/70-15MC 56P, rear tyre 140/70-14MC 62P.",
     "source_url": "https://www.honda.co.uk/motorcycles/range/scooter/adv350/specification-and-price.html",
-    "verified_on": "2026-08-28"
+    "verified_on": "2026-08-28",
+    "front_minimum_load_index": 56,
+    "rear_minimum_load_index": 62,
+    "front_minimum_speed_kmh": 150,
+    "rear_minimum_speed_kmh": 150
   },
   {
     "make": "Honda",
@@ -63,7 +75,11 @@
     "rear": "160/60-R15",
     "source_note": "Official Honda UK Forza 750 2026 specifications. Front tyre 120/70-R17M/C (58H), rear tyre 160/60-R15M/C (67H).",
     "source_url": "https://www.honda.co.uk/motorcycles/range/scooter/forza-750/specifications.html",
-    "verified_on": "2026-08-29"
+    "verified_on": "2026-08-29",
+    "front_minimum_load_index": 58,
+    "rear_minimum_load_index": 67,
+    "front_minimum_speed_kmh": 210,
+    "rear_minimum_speed_kmh": 210
   },
   {
     "make": "Honda",
@@ -74,7 +90,11 @@
     "rear": "160/60R15",
     "source_note": "Official Honda UK X-ADV 2026 specifications. Front tyre 120/70R17 M/C (58H), rear tyre 160/60R15 M/C (67H).",
     "source_url": "https://www.honda.co.uk/motorcycles/range/adventure/x-adv/specifications.html",
-    "verified_on": "2026-08-29"
+    "verified_on": "2026-08-29",
+    "front_minimum_load_index": 58,
+    "rear_minimum_load_index": 67,
+    "front_minimum_speed_kmh": 210,
+    "rear_minimum_speed_kmh": 210
   },
   {
     "make": "Yamaha",
@@ -85,7 +105,11 @@
     "rear": "180/55ZR17",
     "source_note": "Official Yamaha Motor Europe 2025 MT-07 specification/fact sheet. Front tyre 120/70 ZR 17M/C (58W) tubeless, rear tyre 180/55 ZR 17M/C (73W) tubeless.",
     "source_url": "https://www.yamaha-motor.eu/is/en/motorcycles/hyper-naked/pdp/mt-07/",
-    "verified_on": "2026-08-27"
+    "verified_on": "2026-08-27",
+    "front_minimum_load_index": 58,
+    "rear_minimum_load_index": 73,
+    "front_minimum_speed_kmh": 270,
+    "rear_minimum_speed_kmh": 270
   },
   {
     "make": "Yamaha",
@@ -96,7 +120,11 @@
     "rear": "180/55ZR17",
     "source_note": "Official Yamaha Motor Europe 2025 MT-09 fact sheet. Front tyre 120/70ZR17M/C (58W) tubeless, rear tyre 180/55ZR17M/C (73W) tubeless.",
     "source_url": "https://cdn2.yamaha-motor.eu/prod/product-assets/2025/MT09A-35/Factsheets/2025-MT09A-35_en.pdf",
-    "verified_on": "2026-08-27"
+    "verified_on": "2026-08-27",
+    "front_minimum_load_index": 58,
+    "rear_minimum_load_index": 73,
+    "front_minimum_speed_kmh": 270,
+    "rear_minimum_speed_kmh": 270
   },
   {
     "make": "Yamaha",
@@ -107,7 +135,11 @@
     "rear": "180/55ZR17",
     "source_note": "Official Yamaha Motor Europe 2025 TRACER 9 fact sheet. Front tyre 120/70ZR17M/C (58W) tubeless, rear tyre 180/55ZR17M/C (73W) tubeless.",
     "source_url": "https://cdn2.yamaha-motor.eu/prod/product-assets/2025/MT09ATR/Factsheets/2025-MT09ATR_en.pdf",
-    "verified_on": "2026-08-27"
+    "verified_on": "2026-08-27",
+    "front_minimum_load_index": 58,
+    "rear_minimum_load_index": 73,
+    "front_minimum_speed_kmh": 270,
+    "rear_minimum_speed_kmh": 270
   },
   {
     "make": "Yamaha",

@@ -1,11 +1,12 @@
 import unittest
+from pathlib import Path
 
 from moto_alternatives import (
     CatalogTyre,
     find_catalog_fitment_alternatives,
     rank_catalog_alternatives,
 )
-from moto_fitment import Fitment, TyreSpec
+from moto_fitment import Fitment, TyreSpec, load_fitments_json
 
 
 class SafetyRatingScreeningTests(unittest.TestCase):
@@ -207,6 +208,56 @@ class SafetyRatingScreeningTests(unittest.TestCase):
 
         self.assertEqual([item.item.sku for item in result.front], ["FRONT-OEM-SAFE"])
         self.assertEqual([item.item.sku for item in result.rear], ["REAR-OEM-SAFE"])
+
+    def test_verified_dataset_safety_thresholds_are_enforced_end_to_end(self) -> None:
+        records = load_fitments_json(
+            Path(__file__).resolve().parents[1] / "data" / "verified_fitments.json"
+        )
+        catalog = (
+            CatalogTyre(
+                "PCX-FRONT-SAFE",
+                "Example",
+                "PCX front at OEM safety minimum",
+                TyreSpec.parse("110/70-14"),
+                load_index=50,
+                speed_kmh=150,
+            ),
+            CatalogTyre(
+                "PCX-FRONT-LOW-LOAD",
+                "Example",
+                "PCX front below OEM load minimum",
+                TyreSpec.parse("110/70-14"),
+                load_index=49,
+                speed_kmh=150,
+            ),
+            CatalogTyre(
+                "PCX-REAR-SAFE",
+                "Example",
+                "PCX rear at OEM safety minimum",
+                TyreSpec.parse("130/70-13"),
+                load_index=63,
+                speed_kmh=150,
+            ),
+            CatalogTyre(
+                "PCX-REAR-LOW-SPEED",
+                "Example",
+                "PCX rear below OEM speed minimum",
+                TyreSpec.parse("130/70-13"),
+                load_index=63,
+                speed_kmh=149,
+            ),
+        )
+
+        result = find_catalog_fitment_alternatives(
+            "Honda",
+            "PCX125",
+            2025,
+            catalog,
+            records,
+        )
+
+        self.assertEqual([item.item.sku for item in result.front], ["PCX-FRONT-SAFE"])
+        self.assertEqual([item.item.sku for item in result.rear], ["PCX-REAR-SAFE"])
 
     def test_invalid_safety_thresholds_are_rejected(self) -> None:
         for invalid in (0, -1, True):

@@ -52,6 +52,12 @@ jobs:
               print(f"{module.__name__}: {module.__file__}")
           PY
 
+      - name: Verify installed CLI entry point
+        run: |
+          tmpdir="$(mktemp -d)"
+          cd "$tmpdir"
+          moto-fitment --help | grep -F "Resolve verified motorcycle tyre fitment against a supplier CSV."
+
       - name: Validate verified fitment dataset
         run: |
           python - <<'PY'

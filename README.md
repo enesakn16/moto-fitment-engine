@@ -8,6 +8,34 @@ The engine resolves **make + model + year → verified front/rear OEM tyre sizes
 
 It is designed to fail closed when verified fitment or safety-critical catalog data is malformed. A geometrically close tyre is **not** automatically manufacturer-approved: rim width, clearance, ABS/TCS behavior, construction restrictions, homologation and manufacturer documentation can still require separate verification.
 
+## Quick start
+
+No third-party runtime dependencies are required.
+
+```bash
+git clone https://github.com/enesakn16/moto-fitment-engine.git
+cd moto-fitment-engine
+python -m pip install .
+```
+
+Run a verified model/year query directly from the terminal:
+
+```bash
+moto-fitment Honda PCX125 2025 \
+  --fitments data/verified_fitments.json \
+  --catalog supplier_catalog.csv \
+  --only-in-stock \
+  --limit-per-axle 5
+```
+
+The command prints a JSON payload containing the matched vehicle and verified OEM fitment metadata plus ranked front/rear catalog candidates. Supplier rows that are malformed, ambiguous, duplicated or below available OEM load/speed minimums fail closed instead of being silently accepted.
+
+For development, run the full test suite with:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
 ## What it does
 
 - Resolves normalized make/model/year input against source-traceable fitment records.
@@ -25,16 +53,6 @@ It is designed to fail closed when verified fitment or safety-critical catalog d
 - Ranks already-eligible products by availability, geometry distance, price and stable tie-breakers.
 - Produces exact-money, JSON-safe payloads suitable for API/UI consumers.
 - Runs automated tests on Python 3.11 and 3.13 in GitHub Actions.
-
-## Quick start
-
-No third-party runtime dependencies are required.
-
-```bash
-git clone https://github.com/enesakn16/moto-fitment-engine.git
-cd moto-fitment-engine
-python -m unittest discover -s tests -v
-```
 
 ## Supplier catalog CSV
 
@@ -79,30 +97,20 @@ Importer rules are intentionally strict:
 
 ## End-to-end catalog example
 
-The public orchestration boundary is `resolve_catalog_fitment_payload()`. It combines verified OEM lookup, geometry screening, OEM safety thresholds, inventory-aware presentation ranking and serialization without letting commerce signals weaken technical eligibility.
+For Python callers, `resolve_catalog_fitment_from_files()` is the simplest file-backed integration boundary. It combines verified OEM lookup, strict supplier ingestion, technical screening, OEM safety thresholds, inventory-aware ranking and JSON-safe serialization.
 
 ```python
-import json
+from moto_fitment_service import resolve_catalog_fitment_from_files
 
-from catalog_import import load_catalog_csv
-from moto_catalog_ranking import resolve_catalog_fitment_payload
-from moto_fitment import load_fitments_json
-
-records = load_fitments_json("data/verified_fitments.json")
-catalog = load_catalog_csv("supplier_catalog.csv")
-
-payload = resolve_catalog_fitment_payload(
+payload = resolve_catalog_fitment_from_files(
     "Honda",
     "PCX125",
     2025,
-    catalog,
-    records,
-    require_verified=True,
+    "supplier_catalog.csv",
+    "data/verified_fitments.json",
     only_in_stock=True,
     limit_per_axle=5,
 )
-
-print(json.dumps(payload, ensure_ascii=False, indent=2))
 ```
 
 Money values are serialized as strings so `Decimal` precision is preserved. The response includes vehicle identity, OEM sizes, verification metadata, ranked front/rear candidates and an explicit safety disclaimer.
@@ -154,6 +162,9 @@ The code keeps ingestion, technical eligibility and commerce presentation separa
 
 4. **`moto_catalog_ranking.py` — presentation layer**  
    Orders already-screened candidates using explicit availability and geometry priorities, then serializes them for APIs/frontends. It never turns a commerce signal into a compatibility guarantee.
+
+5. **`moto_fitment_service.py` — file/CLI orchestration**  
+   Composes the strict loaders and ranking pipeline for terminal, API and back-office integrations without duplicating safety rules.
 
 This separation is intentional: price or stock can change ordering, but they cannot make an otherwise ineligible tyre pass fitment screening.
 
@@ -216,7 +227,7 @@ Run the complete suite locally:
 python -m unittest discover -s tests -v
 ```
 
-GitHub Actions runs the suite on Python 3.11 and 3.13. Tests cover fitment validation, overlap/conflict handling, geometry screening, verified load/speed thresholds, service-description parsing, supplier CSV ingestion, commerce metadata, presentation ranking and orchestration behavior.
+GitHub Actions runs the suite on Python 3.11 and 3.13, verifies the installed package outside the source tree and smoke-tests the installed `moto-fitment` console entry point. Tests cover fitment validation, overlap/conflict handling, geometry screening, verified load/speed thresholds, service-description parsing, supplier CSV ingestion, commerce metadata, presentation ranking and orchestration behavior.
 
 ## Roadmap
 
@@ -228,4 +239,4 @@ GitHub Actions runs the suite on Python 3.11 and 3.13. Tests cover fitment valid
 
 ## Status
 
-**In development.** Verified lookup, strict JSON ingestion, supplier CSV ingestion, geometry screening, supported OEM load/speed enforcement, catalog evaluation, presentation ranking and JSON-safe orchestration are test-backed and CI-backed. Dataset coverage and several safety-critical fitment attributes remain intentionally incomplete, so this repository should not be presented as a complete manufacturer-approved fitment catalog yet.
+**In development.** Verified lookup, strict JSON ingestion, supplier CSV ingestion, geometry screening, supported OEM load/speed enforcement, catalog evaluation, presentation ranking, JSON-safe orchestration and an installable CLI are test-backed and CI-backed. Dataset coverage and several safety-critical fitment attributes remain intentionally incomplete, so this repository should not be presented as a complete manufacturer-approved fitment catalog yet.

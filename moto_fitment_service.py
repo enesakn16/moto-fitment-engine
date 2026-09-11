@@ -8,8 +8,10 @@ reimplementing safety or commerce rules.
 
 from __future__ import annotations
 
+import argparse
+import json
 from pathlib import Path
-from typing import TextIO
+from typing import Sequence, TextIO
 
 from catalog_import import load_catalog_csv
 from moto_catalog_ranking import resolve_catalog_fitment_payload
@@ -30,19 +32,7 @@ def resolve_catalog_fitment_from_files(
     prefer_available: bool = True,
     limit_per_axle: int | None = None,
 ) -> dict[str, object]:
-    """Return a commerce-ready fitment payload from catalogue and fitment files.
-
-    Both inputs cross their existing fail-closed ingestion boundaries before matching:
-
-    * ``fitments_json`` must pass provenance, schema, year-range and tyre-size checks.
-    * ``catalog_csv`` must pass required-field, duplicate-SKU, price/stock and service
-      description validation.
-
-    OEM load/speed requirements stored in the verified fitment record are enforced by
-    the lower-level screening pipeline automatically. This wrapper intentionally does
-    not accept caller-supplied load/speed overrides so an integration cannot weaken or
-    accidentally invent safety-critical thresholds at this high-level API boundary.
-    """
+    """Return a commerce-ready fitment payload from catalogue and fitment files."""
     records = load_fitments_json(fitments_json)
     catalog = load_catalog_csv(catalog_csv)
 
@@ -59,3 +49,43 @@ def resolve_catalog_fitment_from_files(
         prefer_available=prefer_available,
         limit_per_axle=limit_per_axle,
     )
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="moto-fitment",
+        description="Resolve verified motorcycle tyre fitment against a supplier CSV.",
+    )
+    parser.add_argument("make", help="Motorcycle manufacturer, for example Honda")
+    parser.add_argument("model", help="Motorcycle model, for example PCX125")
+    parser.add_argument("year", type=int, help="Model year")
+    parser.add_argument("--catalog", required=True, type=Path, help="Supplier catalogue CSV")
+    parser.add_argument("--fitments", required=True, type=Path, help="Verified fitment JSON")
+    parser.add_argument("--only-in-stock", action="store_true", help="Exclude out-of-stock catalogue items")
+    parser.add_argument("--limit-per-axle", type=int, default=None, help="Maximum ranked results per axle")
+    parser.add_argument("--max-delta-percent", type=float, default=3.0, help="Maximum rolling-diameter delta percent")
+    parser.add_argument("--max-width-delta-mm", type=int, default=20, help="Maximum tyre width delta in millimetres")
+    parser.add_argument("--no-prefer-available", action="store_true", help="Do not rank available items ahead of unavailable items")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    payload = resolve_catalog_fitment_from_files(
+        args.make,
+        args.model,
+        args.year,
+        args.catalog,
+        args.fitments,
+        max_delta_percent=args.max_delta_percent,
+        max_width_delta_mm=args.max_width_delta_mm,
+        only_in_stock=args.only_in_stock,
+        prefer_available=not args.no_prefer_available,
+        limit_per_axle=args.limit_per_axle,
+    )
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

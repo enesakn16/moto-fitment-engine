@@ -21,6 +21,9 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
+[project.scripts]
+moto-fitment = "moto_fitment_service:main"
+
 [project.urls]
 Homepage = "https://github.com/enesakn16/moto-fitment-engine"
 Repository = "https://github.com/enesakn16/moto-fitment-engine"

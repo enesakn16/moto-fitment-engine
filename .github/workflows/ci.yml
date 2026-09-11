@@ -34,11 +34,20 @@ jobs:
           tmpdir="$(mktemp -d)"
           cd "$tmpdir"
           python - <<'PY'
+          import catalog_import
           import moto_alternatives
           import moto_catalog_ranking
           import moto_fitment
+          import moto_fitment_service
 
-          for module in (moto_fitment, moto_alternatives, moto_catalog_ranking):
+          modules = (
+              catalog_import,
+              moto_fitment,
+              moto_alternatives,
+              moto_catalog_ranking,
+              moto_fitment_service,
+          )
+          for module in modules:
               assert module.__file__, f"{module.__name__} has no import path"
               print(f"{module.__name__}: {module.__file__}")
           PY

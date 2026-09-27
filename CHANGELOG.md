@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows Semantic Versioning for published releases.
 
-## [0.1.0] - 2026-09-12
+## [Unreleased] - 0.1.0
 
 ### Added
 
@@ -30,6 +30,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The bundled verified dataset is intentionally limited rather than pretending to provide broad unsupported vehicle coverage.
 - Rim-width compatibility, suspension/fender clearance, ABS/TCS calibration and homologation are not yet modeled as first-class constraints.
-- No hosted HTTP API or public demo is included in this release; the supported interfaces are the Python API and installed CLI.
-
-[0.1.0]: https://github.com/enesakn16/moto-fitment-engine/releases/tag/v0.1.0
+- No hosted HTTP API or public demo is included in this release candidate; the supported interfaces are the Python API and installed CLI.
+- No GitHub tag or release has been published yet.

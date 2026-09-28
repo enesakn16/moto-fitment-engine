@@ -240,3 +240,7 @@ GitHub Actions runs the suite on Python 3.11 and 3.13, verifies the installed pa
 ## Status
 
 **In development.** Verified lookup, strict JSON ingestion, supplier CSV ingestion, geometry screening, supported OEM load/speed enforcement, catalog evaluation, presentation ranking, JSON-safe orchestration and an installable CLI are test-backed and CI-backed. Dataset coverage and several safety-critical fitment attributes remain intentionally incomplete, so this repository should not be presented as a complete manufacturer-approved fitment catalog yet.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

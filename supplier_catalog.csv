@@ -1,0 +1,3 @@
+sku,brand,product_name,tyre_size,stock_quantity,price,product_url,service_description
+DEMO-PCX-FRONT-001,DemoTyre,PCX125 Front Alternative Demo,120/60-14,8,1499.90,https://example.com/products/demo-pcx-front-001,53P
+DEMO-PCX-REAR-001,DemoTyre,PCX125 Rear Alternative Demo,140/60-13,5,1899.90,https://example.com/products/demo-pcx-rear-001,64P

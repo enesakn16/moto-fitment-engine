@@ -58,7 +58,30 @@ jobs:
       - name: Verify installed CLI
         run: |
           cd "$(mktemp -d)"
-          moto-fitment --help | grep -F "Find and rank supplier catalog tires"
+          moto-fitment --help | grep -F "Resolve verified motorcycle tyre fitment against a supplier CSV."
+
+      - name: Verify documented quick start
+        run: |
+          output_file="$RUNNER_TEMP/pcx125-demo.json"
+          moto-fitment Honda PCX125 2025 \
+            --fitments data/verified_fitments.json \
+            --catalog supplier_catalog.csv \
+            --only-in-stock \
+            --limit-per-axle 5 > "$output_file"
+          python - "$output_file" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              payload = json.load(handle)
+
+          assert payload["vehicle"]["make"] == "Honda"
+          assert payload["vehicle"]["model"] == "PCX125"
+          assert payload["oem"]["front_tyre_size"] == "110/70-14"
+          assert payload["oem"]["rear_tyre_size"] == "130/70-13"
+          assert payload["candidates"]["front"][0]["sku"] == "DEMO-PCX-FRONT-001"
+          assert payload["candidates"]["rear"][0]["sku"] == "DEMO-PCX-REAR-001"
+          PY
 
       - name: Build wheel and source distribution
         run: python -m build

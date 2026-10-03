@@ -89,6 +89,18 @@ jobs:
       - name: Validate distribution metadata
         run: python -m twine check --strict dist/*
 
+      - name: Verify built wheel in a clean environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_venv="$RUNNER_TEMP/release-venv"
+          python -m venv "$release_venv"
+          "$release_venv/bin/python" -m pip install dist/*.whl
+          "$release_venv/bin/python" -m pip check
+          cd "$(mktemp -d)"
+          "$release_venv/bin/moto-fitment" --help \
+            | grep -F "Resolve verified motorcycle tyre fitment against a supplier CSV."
+
       - name: Generate and verify SHA-256 checksums
         shell: bash
         run: |

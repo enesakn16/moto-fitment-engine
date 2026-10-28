@@ -21,6 +21,14 @@ class TyreSpec:
     aspect_ratio: int
     rim_in: int
 
+    def __post_init__(self) -> None:
+        # Invalid tyre dimensions must never reach geometry calculations or
+        # a supplier/OEM fitment result. bool is an int subclass in Python.
+        for field_name in ("width_mm", "aspect_ratio", "rim_in"):
+            value = getattr(self, field_name)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"{field_name} must be a positive integer")
+
     @property
     def diameter_mm(self) -> float:
         sidewall = self.width_mm * (self.aspect_ratio / 100)

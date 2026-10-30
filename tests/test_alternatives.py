@@ -85,6 +85,37 @@ class GeometryAlternativeRankingTests(unittest.TestCase):
                 max_width_delta_mm=-1,
             )
 
+    def test_invalid_tolerances_fail_closed_in_both_screeners(self) -> None:
+        original = TyreSpec.parse("150/70-17")
+        far_size = TyreSpec.parse("150/30-17")
+        far_catalog = (CatalogTyre("FAR", "Example", "Far size", far_size),)
+
+        # An infinite diameter threshold used to allow implausibly distant
+        # tyres through both screening paths, even with normal width limits.
+        for tolerance in (float("inf"), float("-inf"), float("nan"), True, "3"):
+            with self.subTest(kind="geometry-diameter", value=repr(tolerance)):
+                with self.assertRaisesRegex(ValueError, "non-negative and finite"):
+                    rank_geometry_alternatives(
+                        original, (far_size,), max_delta_percent=tolerance
+                    )
+            with self.subTest(kind="catalog-diameter", value=repr(tolerance)):
+                with self.assertRaisesRegex(ValueError, "non-negative and finite"):
+                    rank_catalog_alternatives(
+                        original, far_catalog, max_delta_percent=tolerance
+                    )
+
+        for tolerance in (True, 20.5, "20", -1):
+            with self.subTest(kind="geometry-width", value=repr(tolerance)):
+                with self.assertRaisesRegex(ValueError, "non-negative integer"):
+                    rank_geometry_alternatives(
+                        original, (far_size,), max_width_delta_mm=tolerance
+                    )
+            with self.subTest(kind="catalog-width", value=repr(tolerance)):
+                with self.assertRaisesRegex(ValueError, "non-negative integer"):
+                    rank_catalog_alternatives(
+                        original, far_catalog, max_width_delta_mm=tolerance
+                    )
+
     def test_vehicle_lookup_screens_catalog_for_both_wheels(self) -> None:
         fitment = Fitment(
             make="Example",

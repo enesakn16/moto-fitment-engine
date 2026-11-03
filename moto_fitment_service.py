@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Sequence, TextIO
 
@@ -51,6 +52,16 @@ def resolve_catalog_fitment_from_files(
     )
 
 
+def _non_negative_finite_float(value: str) -> float:
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a finite non-negative number") from exc
+    if not math.isfinite(parsed) or parsed < 0:
+        raise argparse.ArgumentTypeError("must be a finite non-negative number")
+    return parsed
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="moto-fitment",
@@ -63,7 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--fitments", required=True, type=Path, help="Verified fitment JSON")
     parser.add_argument("--only-in-stock", action="store_true", help="Exclude out-of-stock catalogue items")
     parser.add_argument("--limit-per-axle", type=int, default=None, help="Maximum ranked results per axle")
-    parser.add_argument("--max-delta-percent", type=float, default=3.0, help="Maximum rolling-diameter delta percent")
+    parser.add_argument("--max-delta-percent", type=_non_negative_finite_float, default=3.0, help="Maximum rolling-diameter delta percent")
     parser.add_argument("--max-width-delta-mm", type=int, default=20, help="Maximum tyre width delta in millimetres")
     parser.add_argument("--no-prefer-available", action="store_true", help="Do not rank available items ahead of unavailable items")
     return parser

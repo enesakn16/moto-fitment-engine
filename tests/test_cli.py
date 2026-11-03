@@ -56,6 +56,19 @@ class CliParserTests(unittest.TestCase):
                     build_parser().parse_args(argv)
                 self.assertEqual(raised.exception.code, 2)
 
+    def test_rejects_invalid_diameter_tolerances_at_parse_time(self) -> None:
+        base = ["Honda", "PCX125", "2024", "--catalog", "supplier.csv", "--fitments", "fitments.json"]
+        for value in ("nan", "inf", "-inf", "-0.01", "not-a-number"):
+            with self.subTest(value=value):
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors), self.assertRaises(SystemExit) as raised:
+                    build_parser().parse_args(base + ["--max-delta-percent", value])
+                self.assertEqual(raised.exception.code, 2)
+                self.assertIn("finite non-negative", errors.getvalue())
+        for value in ("0", "2.5"):
+            with self.subTest(value=value):
+                self.assertEqual(build_parser().parse_args(base + ["--max-delta-percent", value]).max_delta_percent, float(value))
+
     def test_rejects_non_integer_model_year(self) -> None:
         argv = [
             "Honda", "PCX125", "twenty-twenty-four",

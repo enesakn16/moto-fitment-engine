@@ -29,6 +29,21 @@ class TyreSpecTests(unittest.TestCase):
             with self.subTest(notation=notation):
                 self.assertEqual(TyreSpec.parse(notation), expected)
 
+    def test_rejects_zero_dimensions_from_supplier_or_oem_text(self) -> None:
+        for size in ("000/70-17", "120/00-17", "120/70-00", "000/00-00"):
+            with self.subTest(size=size), self.assertRaises(ValueError):
+                TyreSpec.parse(size)
+
+    def test_rejects_invalid_directly_constructed_dimensions(self) -> None:
+        for dimensions in (
+            (0, 70, 17), (120, 0, 17), (120, 70, 0),
+            (-1, 70, 17), (120, -1, 17), (120, 70, -1),
+            (True, 70, 17), (120, False, 17), (120, 70, True),
+            (120.0, 70, 17),
+        ):
+            with self.subTest(dimensions=dimensions), self.assertRaises(ValueError):
+                TyreSpec(*dimensions)
+
     def test_rejects_unsupported_size(self) -> None:
         with self.assertRaises(ValueError):
             TyreSpec.parse("3.50-10")
@@ -198,6 +213,11 @@ class FitmentJsonLoaderTests(unittest.TestCase):
 
     def test_rejects_malformed_tyre_size(self) -> None:
         record = {**self.record, "front": "3.50-10"}
+        with self.assertRaises(ValueError):
+            load_fitments_json(self._write_json([record]))
+
+    def test_rejects_zero_dimension_in_verified_fitment_json(self) -> None:
+        record = {**self.record, "front": "120/00-17"}
         with self.assertRaises(ValueError):
             load_fitments_json(self._write_json([record]))
 

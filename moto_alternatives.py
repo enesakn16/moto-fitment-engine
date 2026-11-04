@@ -9,6 +9,7 @@ specific validation.
 from __future__ import annotations
 
 import re
+from math import isfinite
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Iterable
@@ -194,10 +195,21 @@ def rank_geometry_alternatives(
     homologation and manufacturer restrictions remain outside this geometry-only
     calculation and must still be verified before a tyre is described as compatible.
     """
-    if max_delta_percent < 0:
-        raise ValueError("max_delta_percent must be non-negative")
-    if max_width_delta_mm < 0:
-        raise ValueError("max_width_delta_mm must be non-negative")
+    # Infinity silently disables the diameter screen; NaN and booleans are not
+    # meaningful tolerances. Validate before examining any catalog candidates.
+    if (
+        isinstance(max_delta_percent, bool)
+        or not isinstance(max_delta_percent, (int, float))
+        or not isfinite(max_delta_percent)
+        or max_delta_percent < 0
+    ):
+        raise ValueError("max_delta_percent must be non-negative and finite")
+    if (
+        isinstance(max_width_delta_mm, bool)
+        or not isinstance(max_width_delta_mm, int)
+        or max_width_delta_mm < 0
+    ):
+        raise ValueError("max_width_delta_mm must be non-negative integer")
 
     seen: set[TyreSpec] = set()
     evaluations: list[AlternativeEvaluation] = []
@@ -270,10 +282,21 @@ def rank_catalog_alternatives(
     rejected alongside candidates below the required threshold. Callers must source
     those minimums from verified OEM/vehicle data; this function never invents them.
     """
-    if max_delta_percent < 0:
-        raise ValueError("max_delta_percent must be non-negative")
-    if max_width_delta_mm < 0:
-        raise ValueError("max_width_delta_mm must be non-negative")
+    # Infinity silently disables the diameter screen; NaN and booleans are not
+    # meaningful tolerances. Validate before examining any catalog candidates.
+    if (
+        isinstance(max_delta_percent, bool)
+        or not isinstance(max_delta_percent, (int, float))
+        or not isfinite(max_delta_percent)
+        or max_delta_percent < 0
+    ):
+        raise ValueError("max_delta_percent must be non-negative and finite")
+    if (
+        isinstance(max_width_delta_mm, bool)
+        or not isinstance(max_width_delta_mm, int)
+        or max_width_delta_mm < 0
+    ):
+        raise ValueError("max_width_delta_mm must be non-negative integer")
     _validate_positive_threshold(minimum_load_index, "minimum_load_index")
     _validate_positive_threshold(minimum_speed_kmh, "minimum_speed_kmh")
 

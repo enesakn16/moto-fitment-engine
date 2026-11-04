@@ -62,7 +62,7 @@ class CliParserTests(unittest.TestCase):
             with self.subTest(value=value):
                 errors = io.StringIO()
                 with contextlib.redirect_stderr(errors), self.assertRaises(SystemExit) as raised:
-                    build_parser().parse_args(base + ["--max-delta-percent", value])
+                    build_parser().parse_args(base + [f"--max-delta-percent={value}"])
                 self.assertEqual(raised.exception.code, 2)
                 self.assertIn("finite non-negative", errors.getvalue())
         for value in ("0", "2.5"):
